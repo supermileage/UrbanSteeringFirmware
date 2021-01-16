@@ -14,5 +14,7 @@ Firmware running on the stm32L432kc microcontroller in the urban steering wheel 
 
 ## Maintainers
 [@spennyp](https://github.com/spennyp)
+
 [@jchan34](https://github.com/jchan34)
+
 [@apoorvgargubc1998](https://github.com/apoorvgargubc1998)
