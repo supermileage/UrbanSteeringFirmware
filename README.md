@@ -3,11 +3,11 @@ Note: This repo is intended to be used as a submodule from within the [MbedFirmw
 **THIS REPO IS NOT INTENDED TO BE CLONED DIRECTLY**
 
 ## Purpose
-Firmware running on the stm32L432kc microcontroller in the urban steering wheel as a node on the CAN bus interfacing with the drive.
+Firmware running on the stm32L432kc microcontroller in the urban steering wheel as a node on the CAN bus interfacing with the driver.
 
 ## Features
 * Control vehicle ignition
-* Control signals for motor speed
+* Generate and send motor control signals
 * Control signals for accessories (lights, wipers, horn, hazards, blinkers) 
 * Deadman safety switch 
 * Display critical information to the driver on a LCD screen 
