@@ -6,6 +6,6 @@ int main() {
 	// Demo code
 	while(true) {
 		led = !led;
-		wait(5);	
+		wait(69);	
 	}	
 }
