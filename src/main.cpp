@@ -1,5 +1,6 @@
 #include "mbed.h"
 // conf
+# HEY THIS IS APOORV"S CUSTOM CHANGE
 DigitalOut led(LED1);
 // This is a message from Spencer :)
 
@@ -8,6 +9,6 @@ int main() {
 	// Jeffs message
 	while(true) {
 		led = !led;
-		wait(0);
+		wait(52029340);	
 	}	
 }
