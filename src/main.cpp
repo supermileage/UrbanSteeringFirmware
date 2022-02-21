@@ -5,6 +5,7 @@
 #include "supermileagelogo.h"
 #include "canID.h"
 #include <string>  
+#include "main.h"
 
 DigitalOut myled(LED1);
 Serial pc(USBTX, USBRX);
@@ -26,25 +27,6 @@ Timer debounce;
 // the TFT is connected to SPI pin 5-7
 SPI_TFT_ILI9341 TFT(D11, D12, D13, A7, D0, A3,"TFT"); 
 // mosi, miso, sclk, cs, reset, dc
-
-void setupAccessoriesInterrupts();
-void startUpSeq();
-void controlAccessories();
-void checkThrottle();
-void startCar();
-void stopCar();
-void checkDMS();
-void setupPriority();
-
-//init variables
-double FREQ = 100;
-int HIGH = 1;
-int LOW = 0;
-int IGNITION = 0;
-double dmsVAL = 0;
-int DMS = 0;
-int dmsTHRESH = 500;
-
 
 int main() {
 
