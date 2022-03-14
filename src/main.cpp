@@ -10,7 +10,6 @@
 #include <string>  
 
 #define TFT_DISPLAY 1
-
 #define DMS_THRESH 0.1f
 #define ACCESSORIES_TRANSMIT_INTERVAL 0.2f
 #define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 0.5f
@@ -22,26 +21,28 @@
 #define SLOPE (MAX_THROTTLE_OUTPUT - MIN_THROTTLE_OUTPUT) / (MAX_THROTTLE_INPUT - MIN_THROTTLE_INPUT)
 #define OFFSET MAX_THROTTLE_OUTPUT - (SLOPE * MAX_THROTTLE_INPUT)
 
-CAN can(D10, D2, 500000);
-
-DigitalIn lights(A0,PullDown); // 
-DigitalIn brake(D1,PullDown); // 
-DigitalIn horn(D5,PullDown); // PB6
-DigitalIn hazards(D9,PullDown); // PA8
-DigitalIn rightBlinker(D4,PullDown); //PB7
-DigitalIn leftBlinker(D3,PullDown); //PB0
-DigitalIn wipers(A2,PullDown); // PA3
-DigitalIn ignition(D6,PullDown);
-AnalogIn dms(A1); //deadman switch
-AnalogIn throttle(A6);
-
+// Compile resources for screen or serial port debugging
 #if TFT_DISPLAY
-	// LCD Display
 	SPI_TFT_ILI9341 TFT(D11, D12, D13, A7, D0, A3, "TFT");
 #else
-	// Serial Out
 	Serial pc(USBTX, USBRX); // tx, rx
 #endif
+
+CAN can(D10, D2, 500000);
+
+// Accessories
+DigitalIn lights(A0,PullDown);
+DigitalIn brake(D1,PullDown);
+DigitalIn horn(D5,PullDown);
+DigitalIn hazards(D9,PullDown);
+DigitalIn rightBlinker(D4,PullDown);
+DigitalIn leftBlinker(D3,PullDown);
+DigitalIn wipers(A2,PullDown);
+
+// Ready
+DigitalIn ignition(D6,PullDown);
+AnalogIn dms(A1);
+AnalogIn throttle(A6);
 
 Timer timer_MTR;
 Timer timer_TEL;
@@ -65,8 +66,8 @@ int main() {
     timer_MTR.start();
     timer_TEL.start();
     timer_ACC.start();
-    uint8_t prev_data_str = ACC_task();
-    uint8_t curr_data_str = 0;
+    uint8_t prev_dataStr = ACC_task();
+    uint8_t curr_dataStr = 0;
     CANMessage msg;
 	_startTime = time(NULL);
 
@@ -84,11 +85,11 @@ int main() {
 
 		// Handle accessories
         if (timer_ACC.read() > ACCESSORIES_TRANSMIT_INTERVAL){
-            curr_data_str = ACC_task();
-            if ((curr_data_str ^ prev_data_str)) {
-                const char data[] = {0, curr_data_str};
+            curr_dataStr = ACC_task();
+            if ((curr_dataStr ^ prev_dataStr)) {
+                const char data[] = {0, curr_dataStr};
                 can.write(CANMessage(CAN_ACC_OPERATION, data, 2));
-                prev_data_str = curr_data_str;
+                prev_dataStr = curr_dataStr;
             }
             timer_ACC.reset();
         }
@@ -103,7 +104,7 @@ int main() {
 
 char ACC_task(){
     char lightsVal = (char)(lights.read());
-	char brake_val = (char)(!brake.read());
+	char brakeVal = (char)(!brake.read());
     char hornVal = (char)(horn.read());
     char hazardVal = (char)(hazards.read());
     char rightbVal = (char)(rightBlinker.read());
@@ -115,8 +116,8 @@ char ACC_task(){
         rightbVal = 0;
     }
 
-    char data_str = (wiperVal << 6) | (leftbVal << 5) | (rightbVal << 4) | (hazardVal << 3) | (hornVal << 2) | (brake_val << 1) | lightsVal;
-    return data_str;
+    char dataStr = (wiperVal << 6) | (leftbVal << 5) | (rightbVal << 4) | (hazardVal << 3) | (hornVal << 2) | (brakeVal << 1) | lightsVal;
+    return dataStr;
 }
 
 char get_dms_val() {
@@ -139,12 +140,12 @@ char get_dms_val() {
 void MTR_task(){
     _dmsVal = get_dms_val();
     _ignitionVal = (char)ignition.read();
-    char brake_val = (char)!brake.read();
+    char brakeVal = (char)!brake.read();
 
-    unsigned char throttle_val = 0;
+    unsigned char throttleVal = 0;
     
-    if (_dmsVal && _ignitionVal && !brake_val) {
-        throttle_val = get_throttle_val();
+    if (_dmsVal && _ignitionVal && !brakeVal) {
+        throttleVal = get_throttle_val();
     }
 
 	#if !TFT_DISPLAY
@@ -152,34 +153,34 @@ void MTR_task(){
 	#endif
 
 	// Throttle Data
-	const unsigned char throttle_data[] = { throttle_val };
-    can.write(CANMessage(CAN_STEERING_THROTTLE, throttle_data, 1));
+	const unsigned char throttleData[] = { throttleVal };
+    can.write(CANMessage(CAN_STEERING_THROTTLE, throttleData, 1));
 
 	// Ready Data
-    char ready_val = (brake_val << 2) | (_dmsVal << 1) | _ignitionVal;
-    const char ready_data[] = { ready_val };
-    can.write(CANMessage(CAN_STEERING_READY, ready_data, 1));
+    char readyVal = (brakeVal << 2) | (_dmsVal << 1) | _ignitionVal;
+    const char readyData[] = { readyVal };
+    can.write(CANMessage(CAN_STEERING_READY, readyData, 1));
 }
 
 unsigned char get_throttle_val() {
-	float throttle_as_float = throttle.read();
+	float throttleAsFloat = throttle.read();
 
-	if (throttle_as_float <= MIN_THROTTLE_INPUT) {
+	if (throttleAsFloat <= MIN_THROTTLE_INPUT) {
 		return (unsigned char)MIN_THROTTLE_OUTPUT;
-	} else if (throttle_as_float >= MAX_THROTTLE_INPUT) {
+	} else if (throttleAsFloat >= MAX_THROTTLE_INPUT) {
 		return (unsigned char)MAX_THROTTLE_OUTPUT;
 	}
 
-	return (unsigned char)(throttle_as_float * SLOPE + OFFSET);
+	return (unsigned char)(throttleAsFloat * SLOPE + OFFSET);
 }
 
 #if TFT_DISPLAY
 
 void display_task(const void* arg) {
 	while (true) {
-			unsigned long current_time = time(NULL);
-			unsigned minutes = current_time / 60;
-			unsigned seconds = current_time % 60;
+			unsigned long currentTime = time(NULL);
+			unsigned minutes = currentTime / 60;
+			unsigned seconds = currentTime % 60;
 			const char* x = minutes < 10 ? "0" : "";
 			const char* y = seconds < 10 ? "0" : "";
 
