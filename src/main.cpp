@@ -8,7 +8,7 @@
 #include "main.h"
 
 int main() {
-    startUpSeq();
+    //startUpSeq();
     timer_MTR.start();
     timer_TEL.start();
     timer_ACC.start();
@@ -20,11 +20,11 @@ int main() {
 
     while(1){
         can.read(msg);
-        if (timer_ACC.read()> 0.2){
+        if (timer_ACC.read()> 0.05){
             curr_data_str = ACC_task();
             if ((curr_data_str ^ prev_data_str)){
                 const char data[] = {0, curr_data_str};
-                can.write(CANMessage(CAN_STR_ACC,data,2));
+                can.write(CANMessage(CAN_ACC_OPERATION,data,2));
                 prev_data_str = curr_data_str;
             }
             timer_ACC.reset();
@@ -40,6 +40,7 @@ int main() {
 char ACC_task(void){
 
     char lightsVal  =    (char) (lights.read());
+    char breakVal   =    (char) (!brake.read()<<1);
     char hornVal    =    (char) (horn.read()<<2);
     char hazardVal  =    (char) (hazards.read()<<3);
     char rightbVal  =    (char) (rightBlinker.read()<<4);
@@ -50,7 +51,7 @@ char ACC_task(void){
         leftbVal    = 0x10;
         rightbVal   = 0x20;
     }
-    char data_str  =  lightsVal | leftbVal | rightbVal | hornVal | hazardVal | wiperVal;
+    char data_str  =  breakVal|lightsVal | leftbVal | rightbVal | hornVal | hazardVal | wiperVal;
     return data_str;
 }
 int readDMS(){
@@ -62,6 +63,7 @@ int readDMS(){
     else if (DMS_VAL > DMS_THRESH){
         DMS_FLAG = 0;
     }
+    //pc.printf("DMS  = %lf , FLAG = %d \n", DMS_VAL , DMS_FLAG );
     return DMS_FLAG;
 }
 
@@ -86,18 +88,19 @@ void MTR_task(void){
     //can.write(CANMessage(CAN_STEERING_THROTTLE,throttleCANData,8));
     char data_str   = DMSVal | ignitionVal | brakeVal;
     const char data[] = {0, data_str};
-    //float throttlevalue = throttle.read();
-    //pc.printf("DMS  = %lf , FLAG = %d \n", throttlevalue , DMS_FLAG );
+    float throttlevalue = throttle.read();
+    pc.printf("Throttle  = %lf , Brake = %d \n", throttlevalue , BRAKE );
+
     can.write(CANMessage(CAN_STEERING_THROTTLE,data,2));
 
 }
-void startUpSeq(){
+// void startUpSeq(){
 
-     TFT.set_orientation(3);
-     TFT.background(Black);
-    TFT.cls(); 
-    TFT.set_font((unsigned char*) Arial12x12);
-    TFT.locate(100,100);
-    // print supermileage logo
-    TFT.Bitmap(55,78,201,85,supermileagelogo);
-}
+//      TFT.set_orientation(3);
+//      TFT.background(Black);
+//     TFT.cls(); 
+//     TFT.set_font((unsigned char*) Arial12x12);
+//     TFT.locate(100,100);
+//     // print supermileage logo
+//     TFT.Bitmap(55,78,201,85,supermileagelogo);
+// }

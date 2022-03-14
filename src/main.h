@@ -14,9 +14,9 @@ DigitalIn lights(A0,PullDown); //
 DigitalIn ignition(D6,PullDown);
 AnalogIn dms(A1); //deadman switch
 AnalogIn throttle(A6);
-DigitalIn brake(D1,PullDown);
-SPI_TFT_ILI9341 TFT(D11, D12, D13, A7, D0, A3,"TFT"); 
-//Serial pc(USBTX, USBRX); // tx, rx
+DigitalIn brake(D1,PullUp);
+//SPI_TFT_ILI9341 TFT(D11, D12, D13, A7, D0, A3,"TFT"); 
+Serial pc(USBTX, USBRX); // tx, rx
 
 Timer timer_MTR;
 Timer timer_TEL;
@@ -27,6 +27,6 @@ Timer timer_ACC;
 char ACC_task(void);
 void MTR_task(void);
 int readDMS(void);
-void startUpSeq(void);
+//void startUpSeq(void);
 
 #endif
