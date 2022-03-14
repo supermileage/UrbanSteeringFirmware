@@ -3,30 +3,46 @@
 
 #include "stdio.h"
 #include "mbed.h"
-CAN can(D10, D2, 500000);
 
-DigitalIn horn(D5,PullDown);  //PB6
-DigitalIn leftBlinker(D3,PullDown); //PB0
-DigitalIn rightBlinker(D4,PullDown); //PB7
-DigitalIn hazards(D9,PullDown); // PA8
-DigitalIn wipers(A2,PullDown); // PA3
-DigitalIn lights(A0,PullDown); //
-DigitalIn ignition(D6,PullDown);
-AnalogIn dms(A1); //deadman switch
-AnalogIn throttle(A6);
-DigitalIn brake(D1,PullDown);
-SPI_TFT_ILI9341 TFT(D11, D12, D13, A7, D0, A3,"TFT"); 
-//Serial pc(USBTX, USBRX); // tx, rx
+/**
+ * @brief Called when any button on steering is switched on/off
+ * 
+ * @return char bit shifted on/off values for each accessory (sent to CanAccessories board in Op Mode 0)
+ */
+char ACC_task();
 
-Timer timer_MTR;
-Timer timer_TEL;
-Timer timer_ACC;
+/**
+ * @brief Processes current state of throttle, depending on ignition, brakes and dms.  Will send a CAN message 
+ * to motor controller with throttle data, and another to telemetry indicating states of ignition, dms, etc..
+ * 
+ */
+void MTR_task();
 
-#define DMS_THRESH 0.06
+/**
+ * @brief Read dead man's switch
+ * 
+ * @return bool indicating whether dead man's switch is on/off
+ */
+char get_dms_val();
 
-char ACC_task(void);
-void MTR_task(void);
-int readDMS(void);
-void startUpSeq(void);
+/**
+ * @brief Gets the value of throttle as unsigned char (0 <= value <= 255)
+ * 
+ * @return unsigned char the current throttle value
+ */
+unsigned char get_throttle_val();
+
+/**
+ * @brief background thread task which updates lcd display
+ * 
+ * @param arg unused task arg
+ */
+void display_task(const void* arg);
+
+/**
+ * @brief Initializes LCD display
+ * 
+ */
+void set_up_display();
 
 #endif
