@@ -59,6 +59,7 @@ Timer timer_ACC;
 
 // globals shared between main and display threads
 unsigned _currentSpeed = 0;
+float _currentBmsSoc = 0.0f;
 float _currentBmsVoltage = 0.0f;
 unsigned long _startTime = 0;
 char _ignitionVal = 0;
@@ -98,12 +99,13 @@ int main() {
             timer_ACC.reset();
         }
 
-		// Check for gps speed / bms voltage updates from telemetry
+		// Check for gps speed / bms data updates from telemetry
 		if (can.read(msg)) {
 			if (msg.id == CAN_TELEMETRY_GPS_DATA) {
 				_currentSpeed = (unsigned)msg.data[0];
 			} else if (msg.id == CAN_TELEMETRY_BMS_DATA) {
-				memcpy((void*)&_currentBmsVoltage, (void*)msg.data, 4);
+				memcpy((void*)&_currentBmsSoc, (void*)msg.data, 4);
+				memcpy((void*)&_currentBmsVoltage, (void*)(msg.data + 4), 4);
 			}
 		}
     }
@@ -201,7 +203,6 @@ char get_dms_val() {
 #define CIRCLE_X_OFFSET_IGNITION  10
 
 // voltage
-#define MAX_VOLTAGE 43.0f
 #define VOLTAGE_TEXT_X 258
 #define VOLTAGE_TEXT_Y STATUS_Y + 17
 #define VOLTAGE_UNIT_OFFSET 41
@@ -230,6 +231,7 @@ char get_dms_val() {
 // display data cache
 unsigned long _lastTime = 0;
 unsigned _lastSpeed = 0;
+float _lastBmsSoc = 0.0f;
 float _lastBmsVoltage = 0.0f;
 unsigned _lastMinutes = 0;
 unsigned _lastSeconds = 0;
@@ -269,7 +271,7 @@ void display_task(const void* arg) {
 
 			// redraw rectangle
 			// float voltage = _currentBmsVoltage > 0.0f ? _currentBmsVoltage : -_currentBmsVoltage; // might not be necessary, unless negative voltage is possible?
-			int rectangleWidth = (int)(_currentBmsVoltage / MAX_VOLTAGE * (float)VOLTAGE_WIDTH);
+			int rectangleWidth = (int)(_currentBmsSoc / 100.0f * (float)VOLTAGE_WIDTH);
 			TFT.fillrect(VOLTAGE_LEFT_X + VOLTAGE_PADDING, VOLTAGE_LEFT_Y + VOLTAGE_PADDING, VOLTAGE_LEFT_X - VOLTAGE_PADDING + rectangleWidth , VOLTAGE_RIGHT_Y - VOLTAGE_PADDING, Green);
 			TFT.fillrect(VOLTAGE_LEFT_X + VOLTAGE_PADDING + rectangleWidth, VOLTAGE_LEFT_Y + VOLTAGE_PADDING, VOLTAGE_RIGHT_X - VOLTAGE_PADDING, VOLTAGE_RIGHT_Y - VOLTAGE_PADDING, Black);
 		}
