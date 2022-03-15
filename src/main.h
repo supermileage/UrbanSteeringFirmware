@@ -43,6 +43,6 @@ void display_task(const void* arg);
  * @brief Initializes LCD display
  * 
  */
-void set_up_display();
+void initialize_display();
 
 #endif
