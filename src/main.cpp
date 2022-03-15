@@ -122,7 +122,11 @@ char ACC_task(){
     char leftbVal = (char)(leftBlinker.read());
     char wiperVal = (char)(wipers.read());
 
-    if (hazardVal) {
+	// turn off blinkers when hazards are on -- 0x4 == right blinker id -- 0x5 == left blinker id 
+    if (hazardVal && (leftbVal | rightbVal)) {
+		const unsigned char data[] = { 0x2, 0x4 << 1, 0x5 << 1 };
+		can.write(CANMessage(CAN_ACC_OPERATION, data, 3));
+		
         leftbVal = 1;
         rightbVal = 1;
     }

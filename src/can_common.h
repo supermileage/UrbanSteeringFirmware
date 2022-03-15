@@ -20,7 +20,8 @@
 // 0x80 - 0x9F
 // 0x180 - 0x19F
 //      TX
-#define CAN_TELEMETRY_GPS_SPEED 0x80
+#define CAN_TELEMETRY_GPS_DATA	0x80
+#define CAN_TELEMETRY_BMS_DATA	0x81
 
 // TinyBMS
 // 0x201 - 0x23F
