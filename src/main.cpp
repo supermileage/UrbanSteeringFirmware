@@ -123,8 +123,8 @@ char ACC_task(){
     char wiperVal = (char)(wipers.read());
 
     if (hazardVal) {
-        leftbVal = 0;
-        rightbVal = 0;
+        leftbVal = 1;
+        rightbVal = 1;
     }
 
     char dataStr = (wiperVal << 6) | (leftbVal << 5) | (rightbVal << 4) | (hazardVal << 3) | (hornVal << 2) | (brakeVal << 1) | lightsVal;
