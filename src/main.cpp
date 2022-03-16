@@ -16,8 +16,8 @@ using namespace std;
 
 #define TFT_DISPLAY 1
 #define DMS_THRESH 0.1f
-#define ACCESSORIES_TRANSMIT_INTERVAL 0.2f
-#define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 0.05f
+#define ACCESSORIES_TRANSMIT_INTERVAL 0.5f
+#define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 1.0f
 
 #define MIN_THROTTLE_OUTPUT 0.0f
 #define MAX_THROTTLE_OUTPUT 255.0f
@@ -71,7 +71,8 @@ int main() {
     timer_MTR.start();
     timer_TEL.start();
     timer_ACC.start();
-    uint8_t prev_dataStr = ACC_task();
+	char dummy;
+    uint8_t prev_dataStr = ACC_task(dummy);
     uint8_t curr_dataStr = 0;
     CANMessage msg;
 	_startTime = time(NULL);
@@ -90,8 +91,14 @@ int main() {
 
 		// Handle accessories
         if (timer_ACC.read() > ACCESSORIES_TRANSMIT_INTERVAL){
-            curr_dataStr = ACC_task();
+			char hazardsOn;
+            curr_dataStr = ACC_task(hazardsOn);
             if ((curr_dataStr ^ prev_dataStr)) {
+				// turn hazards off
+				if (hazardsOn) {
+					const unsigned char data[] = { 0x2, 0x4 << 1, 0x5 << 1 };
+					can.write(CANMessage(CAN_ACC_OPERATION, data, 3));
+				}
                 const char data[] = {0, curr_dataStr};
                 can.write(CANMessage(CAN_ACC_OPERATION, data, 2));
                 prev_dataStr = curr_dataStr;
@@ -113,25 +120,22 @@ int main() {
 
 #pragma region Can
 
-char ACC_task(){
+char ACC_task(char& hazardsVal){
     char lightsVal = (char)(lights.read());
 	char brakeVal = (char)(!brake.read());
     char hornVal = (char)(horn.read());
-    char hazardVal = (char)(hazards.read());
+    hazardsVal = (char)(hazards.read());
     char rightbVal = (char)(rightBlinker.read());
     char leftbVal = (char)(leftBlinker.read());
     char wiperVal = (char)(wipers.read());
 
 	// turn off blinkers when hazards are on -- 0x4 == right blinker id -- 0x5 == left blinker id 
-    if (hazardVal && (leftbVal | rightbVal)) {
-		const unsigned char data[] = { 0x2, 0x4 << 1, 0x5 << 1 };
-		can.write(CANMessage(CAN_ACC_OPERATION, data, 3));
-		
-        leftbVal = 1;
+    if (hazardsVal) {
+		leftbVal = 1;
         rightbVal = 1;
     }
 
-    char dataStr = (wiperVal << 6) | (leftbVal << 5) | (rightbVal << 4) | (hazardVal << 3) | (hornVal << 2) | (brakeVal << 1) | lightsVal;
+    char dataStr = (wiperVal << 6) | (leftbVal << 5) | (rightbVal << 4) | (hazardsVal << 3) | (hornVal << 2) | (brakeVal << 1) | lightsVal;
     return dataStr;
 }
 
