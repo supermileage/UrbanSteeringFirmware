@@ -3,7 +3,7 @@
 ## Purpose
 Firmware running on the stm32L432kc microcontroller in the urban steering wheel as a node on the CAN bus interfacing with the driver.
 
-# Compiling
+## Compiling
 Before compiling, make sure you've installed the platformio extension for vscode.  After opening the project, you should see the platformio toolbar appear on the bottom left, which you can use to compile, flash and open a serial port for debugging.
 
 ## Features
