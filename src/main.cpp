@@ -222,7 +222,7 @@ char get_dms_val() {
 #define VOLTAGE_BTN_HEIGHT 	10
 
 // speed
-#define SPEED_X_LABEL 48
+#define SPEED_X_LABEL 50
 #define SPEED_Y_LABEL 98
 #define SPEED_X 80
 #define SPEED_X_UNIT_OFFSET 110
@@ -236,10 +236,12 @@ char get_dms_val() {
 #define POWER_Y 130
 
 // time
-#define TIME_X_LABEL 45
-#define TIME_Y_LABEL 198
-#define TIME_X 80
-#define TIME_Y 180
+#define TIME_X_LABEL 	46
+#define TIME_Y_LABEL 	198
+#define MINUTES_X 		80
+#define COLON_X			150
+#define SECONDS_X 		165
+#define TIME_Y 			180
 
 // throttle debug
 #define THROTTLE_RAW_X 10
@@ -336,7 +338,6 @@ void display_task() {
 		// Update Power
 		if(_lastThrottle != _currentThrottle) {
 			_lastThrottle = _currentThrottle;
-			printf("Throttle %d\n", _currentThrottle);
 			TFT.locate(POWER_X, POWER_Y);
 			TFT.printf("%03u", (_currentThrottle * 100) / 255);
 			
@@ -348,8 +349,17 @@ void display_task() {
 			int minutes = currentTime / 60;
 			int seconds = currentTime % 60;
 
-			TFT.locate(TIME_X, TIME_Y);
-			TFT.printf("%02u:%02u", minutes, seconds);
+			if(minutes != _lastMinutes){
+				TFT.locate(MINUTES_X, TIME_Y);
+				TFT.printf("%02u", minutes);
+				_lastMinutes = minutes;
+			}
+
+			if(seconds != _lastSeconds){
+				TFT.locate(SECONDS_X, TIME_Y);
+				TFT.printf("%02u", seconds);
+				_lastSeconds = seconds;
+			}
 
 			_lastTime = currentTime;
 		}
@@ -417,8 +427,12 @@ void initialize_display(){
 	TFT.printf("%");
 
 	// time
-	TFT.locate(TIME_X, TIME_Y);
-	TFT.printf("00:00");
+	TFT.locate(MINUTES_X, TIME_Y);
+	TFT.printf("00");
+	TFT.locate(COLON_X, TIME_Y);
+	TFT.printf(":");
+	TFT.locate(SECONDS_X, TIME_Y);
+	TFT.printf("00");
 
 	// Large font values
 	TFT.set_font((unsigned char*) LARGE_FONT);
