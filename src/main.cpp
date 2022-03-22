@@ -1,15 +1,18 @@
+#include <string>
+#include <cmath>
+
 #include "stdio.h"
 #include "mbed.h"
 #include "rtos.h"
+
+#include "can_common.h"
+
 #include "SPI_TFT_ILI9341.h"
 #include "Arial12x12.h"
 #include "Arial28x28.h"
+#include "font_big.h"
 #include "supermileagelogo.h"
-#include "can_common.h"
 #include "main.h"
-
-#include <string>
-#include <cmath>
 
 using namespace std;
 
@@ -185,52 +188,57 @@ char get_dms_val() {
 
 // display macros
 
+// fonts 
+#define SMALL_FONT 	Arial12x12
+#define LARGE_FONT 	Arial28x28
+#define COOL_FONT 	Neu42x35
+
 // accessories
-#define DMS_X 10
-#define IGNITION_X 60
-#define BRAKE_X		100
-#define STATUS_Y 5
-#define CIRCLE_RADIUS 10
-#define CIRCLE_Y_OFFSET CIRCLE_RADIUS * 3
-#define CIRCLE_X_OFFSET_DMS  14
-#define CIRCLE_X_OFFSET_IGNITION  10
-#define CIRCLE_X_OFFSET_BRAKE  14
+#define DMS_X 						10
+#define IGNITION_X 					60
+#define BRAKE_X						100
+#define STATUS_Y 					5
+#define CIRCLE_RADIUS 				10
+#define CIRCLE_Y_OFFSET 			CIRCLE_RADIUS * 3
+#define CIRCLE_X_OFFSET_DMS  		14
+#define CIRCLE_X_OFFSET_IGNITION  	10
+#define CIRCLE_X_OFFSET_BRAKE  		14
 
 // voltage
-#define VOLTAGE_TEXT_X 260
-#define VOLTAGE_TEXT_Y STATUS_Y + 17
+#define VOLTAGE_TEXT_X 		260
+#define VOLTAGE_TEXT_Y 		STATUS_Y + 17
 #define VOLTAGE_UNIT_OFFSET 41
-#define VOLTAGE_LEFT_X 150
-#define VOLTAGE_LEFT_Y 11
-#define VOLTAGE_WIDTH 100
-#define VOLTAGE_HEIGHT 30
-#define VOLTAGE_RIGHT_X VOLTAGE_LEFT_X + VOLTAGE_WIDTH
-#define VOLTAGE_RIGHT_Y VOLTAGE_LEFT_Y + VOLTAGE_HEIGHT
-#define VOLTAGE_PADDING 3
+#define VOLTAGE_LEFT_X 		150
+#define VOLTAGE_LEFT_Y 		11
+#define VOLTAGE_WIDTH 		100
+#define VOLTAGE_HEIGHT 		30
+#define VOLTAGE_RIGHT_X 	VOLTAGE_LEFT_X + VOLTAGE_WIDTH
+#define VOLTAGE_RIGHT_Y 	VOLTAGE_LEFT_Y + VOLTAGE_HEIGHT
+#define VOLTAGE_PADDING 	3
 
-#define VOLTAGE_BTN_X 250
-#define VOLTAGE_BTN_Y 20
-#define VOLTAGE_BTN_WIDTH 2
-#define VOLTAGE_BTN_HEIGHT 10
+#define VOLTAGE_BTN_X 		250
+#define VOLTAGE_BTN_Y 		20
+#define VOLTAGE_BTN_WIDTH 	2
+#define VOLTAGE_BTN_HEIGHT 	10
 
 // speed
-#define SPEED_X 110
+#define SPEED_X_LABEL 48
+#define SPEED_Y_LABEL 98
+#define SPEED_X 80
+#define SPEED_X_UNIT_OFFSET 110
 #define SPEED_Y 80
-#define SPEED_UNIT_OFFSET 50
-#define LARGE_FONT Arial28x28
-#define SMALL_FONT Arial12x12
 
 // power
-#define POWER_X 60
-#define POWER_X_OFFSET 90
-#define POWER_X_UNIT_OFFSET	150
+#define POWER_X_LABEL 48
+#define POWER_Y_LABEL 148
+#define POWER_X 80
+#define POWER_X_UNIT_OFFSET	110
 #define POWER_Y 130
 
 // time
-#define MINUTES_X 105
-#define MINUTES_OFFSET 25
-#define COLON_X 150
-#define SECONDS_X 170
+#define TIME_X_LABEL 45
+#define TIME_Y_LABEL 198
+#define TIME_X 80
 #define TIME_Y 180
 
 // throttle debug
@@ -316,7 +324,7 @@ void display_task() {
 		}
 
 		// Set font size for large test display
-		TFT.set_font((unsigned char*) LARGE_FONT);
+		TFT.set_font((unsigned char*) COOL_FONT);
 
 		// Update Speed
 		if (_lastSpeed != _currentSpeed) {
@@ -326,43 +334,28 @@ void display_task() {
 		}
 
 		// Update Power
-
 		if(_lastThrottle != _currentThrottle) {
 			_lastThrottle = _currentThrottle;
 			printf("Throttle %d\n", _currentThrottle);
-			TFT.locate(POWER_X + POWER_X_OFFSET, POWER_Y);
+			TFT.locate(POWER_X, POWER_Y);
 			TFT.printf("%03u", (_currentThrottle * 100) / 255);
 			
 		}
 
 		// Update Time
 		int currentTime = timerDisplay.read_ms() / 1000;
-		if (currentTime > _lastTime) {
+		if (currentTime != _lastTime) {
 			int minutes = currentTime / 60;
 			int seconds = currentTime % 60;
 
-			if (_lastMinutes ^ minutes) {
-				const char* padding = minutes < 10 ? "0" : "";
-				int minutes_x = minutes < 100 ? MINUTES_X : MINUTES_X - MINUTES_OFFSET;
-				TFT.locate(minutes_x, TIME_Y);
-				TFT.printf("%s%u", padding, minutes);
-				_lastMinutes = minutes;
-			}
+			TFT.locate(TIME_X, TIME_Y);
+			TFT.printf("%02u:%02u", minutes, seconds);
 
-			if (_lastSeconds ^ seconds) {
-				const char* padding = seconds < 10 ? "0" : "";
-				TFT.locate(SECONDS_X, TIME_Y);
-				TFT.printf("%s%u", padding, seconds);
-				_lastSeconds = seconds;
-			}
+			_lastTime = currentTime;
 		}
 
-		// Update Speed
-		if (_lastSpeed != _currentSpeed) {
-			TFT.locate(SPEED_X, SPEED_Y);
-			TFT.printf("%02u", _currentSpeed);
-			_lastSpeed = _currentSpeed;
-		}
+		// Set font size for large test display
+		TFT.set_font((unsigned char*) LARGE_FONT);
 
 		#if DEBUG_THROTTLE
 
@@ -401,33 +394,34 @@ void initialize_display(){
 	TFT.fillrect(VOLTAGE_LEFT_X + VOLTAGE_PADDING, VOLTAGE_LEFT_Y + VOLTAGE_PADDING, VOLTAGE_RIGHT_X - VOLTAGE_PADDING, VOLTAGE_RIGHT_Y - VOLTAGE_PADDING, Green);
 	TFT.rect(VOLTAGE_BTN_X, VOLTAGE_BTN_Y, VOLTAGE_BTN_X + VOLTAGE_BTN_WIDTH, VOLTAGE_BTN_Y + VOLTAGE_BTN_HEIGHT, White);
 
-	// Large font values
-	TFT.set_font((unsigned char*) LARGE_FONT);
+	// Labels
+	TFT.locate(SPEED_X_LABEL, SPEED_Y_LABEL);
+	TFT.printf("SPD");
+	TFT.locate(POWER_X_LABEL, POWER_Y_LABEL);
+	TFT.printf("PWR");
+	TFT.locate(TIME_X_LABEL, TIME_Y_LABEL);
+	TFT.printf("TIME");
+
+	TFT.set_font((unsigned char*) COOL_FONT);
+
 	// speed
 	TFT.locate(SPEED_X, SPEED_Y);
-	TFT.printf("0");
-	TFT.locate(SPEED_X + SPEED_UNIT_OFFSET, SPEED_Y);
+	TFT.printf("00");
+	TFT.locate(SPEED_X + SPEED_X_UNIT_OFFSET, SPEED_Y);
 	TFT.printf("km/h");
+
 	// power
 	TFT.locate(POWER_X, POWER_Y);
-	TFT.printf("PWR:");
-	TFT.locate(POWER_X + POWER_X_OFFSET, POWER_Y);
 	TFT.printf("000");
 	TFT.locate(POWER_X + POWER_X_UNIT_OFFSET, POWER_Y);
 	TFT.printf("%");
+
 	// time
-	TFT.locate(MINUTES_X, TIME_Y);
-	TFT.printf("00");
-	TFT.locate(COLON_X, TIME_Y);
-	TFT.printf(":");
-	TFT.locate(SECONDS_X, TIME_Y);
-	TFT.printf("00");
-	
-	// speed
-	TFT.locate(SPEED_X, SPEED_Y);
-	TFT.printf("00");
-	TFT.locate(SPEED_X + SPEED_UNIT_OFFSET, SPEED_Y);
-	TFT.printf("km/h");
+	TFT.locate(TIME_X, TIME_Y);
+	TFT.printf("00:00");
+
+	// Large font values
+	TFT.set_font((unsigned char*) LARGE_FONT);
 
 	#if DEBUG_THROTTLE
 		TFT.locate(THROTTLE_RAW_X, THROTTLE_RAW_Y);
