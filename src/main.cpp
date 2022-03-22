@@ -13,17 +13,14 @@
 
 using namespace std;
 
-#pragma region Macros
+#define DEBUG_THROTTLE 0
 
-#define DEBUG_THROTTLE 1
-
-#define TFT_DISPLAY 1
 #define DMS_THRESH 0.1f
-#define ACCESSORIES_TRANSMIT_INTERVAL 0.05f
-#define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 0.05f
+#define ACCESSORIES_TRANSMIT_INTERVAL 50
+#define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 50
 
-#define DEBOUNCE_TIME 0.05f
-#define GESTURE_MARGIN 0.5f
+#define DEBOUNCE_TIME 50
+#define GESTURE_MARGIN 500
 #define MIN_THROTTLE_OUTPUT 0.0f
 #define MAX_THROTTLE_OUTPUT 255.0f
 #define MIN_THROTTLE_INPUT 0.35f
@@ -31,17 +28,8 @@ using namespace std;
 #define SLOPE (MAX_THROTTLE_OUTPUT - MIN_THROTTLE_OUTPUT) / (MAX_THROTTLE_INPUT - MIN_THROTTLE_INPUT)
 #define OFFSET MAX_THROTTLE_OUTPUT - (SLOPE * MAX_THROTTLE_INPUT)
 
-#pragma endregion
-
-#pragma region Globals
-
-// Compile resources for screen or serial port debugging
-#if TFT_DISPLAY
-	SPI_TFT_ILI9341 TFT(D11, D12, D13, A7, D0, A3, "TFT");
-#else
-	Serial pc(USBTX, USBRX); // tx, rx
-#endif
-
+SPI_TFT_ILI9341 TFT(D11, D12, D13, A7, D0, A3, "TFT");
+// BufferedSerial pc(USBTX, USBRX); // tx, rx
 CAN can(D10, D2, 500000);
 
 // Accessories
@@ -67,14 +55,12 @@ unsigned _currentSpeed = 0;
 float _currentBmsSoc = 0.0f;
 float _currentBmsVoltage = 0.0f;
 uint8_t _currentThrottle = 0;
-float _lastGestureTime = 0.0f;
+int _lastGestureTime = 0;
 unsigned long _startTime = 0;
 char _ignitionVal = 0;
 char _dmsVal = 0;
 char _brakeVal = 0;
 char _lastGesture = 0;
-
-#pragma endregion
 
 int main() {
     timerMotor.start();
@@ -86,24 +72,22 @@ int main() {
     CANMessage msg;
 	_startTime = time(NULL);
 
-	#if TFT_DISPLAY
-		initialize_display();
-		Thread display_thread;
-		display_thread.start(display_task);
-	#endif
+	initialize_display();
+	Thread display_thread;
+	display_thread.start(display_task);
 
     while(1){
 		// check for time-reset gesture
 		listen_reset_gesture();
 
 		// Handle motor controller
-		if (timerMotor.read() > MOTOR_CONTROLLER_TRANSMIT_INTERVAL) {
+		if (timerMotor.read_ms() > MOTOR_CONTROLLER_TRANSMIT_INTERVAL) {
             handle_motor_inputs();
             timerMotor.reset();
         }
 
 		// Handle accessories
-        if (timerAccessories.read() > ACCESSORIES_TRANSMIT_INTERVAL){
+        if (timerAccessories.read_ms() > ACCESSORIES_TRANSMIT_INTERVAL){
 			char hazardsOn;
             curr_dataStr = read_accessory_inputs(hazardsOn);
             if ((curr_dataStr != prev_dataStr)) {
@@ -132,7 +116,6 @@ int main() {
     }
 }
 
-#pragma region Can
 
 char read_accessory_inputs(char& hazardsVal){
     char lightsVal = (char)(lights.read());
@@ -156,17 +139,13 @@ char read_accessory_inputs(char& hazardsVal){
 void handle_motor_inputs(){
     _dmsVal = get_dms_val();
     _ignitionVal = (char)ignition.read();
-    _brakeVal = (char)brake.read();
-	
+    _brakeVal = (char)!brake.read();
+
     _currentThrottle = get_throttle_val();
     
-    if (!_dmsVal || !_ignitionVal || !_brakeVal) {
+    if (!_dmsVal || !_ignitionVal || _brakeVal) {
         _currentThrottle = 0;
     }
-
-	#if !TFT_DISPLAY
-		pc.printf("Status -- DMS: %d\t Ignition: %d\n", _dmsVal, _ignitionVal);
-	#endif
 
 	// Throttle Data
 	const unsigned char throttleData[] = { _currentThrottle };
@@ -194,10 +173,6 @@ char get_dms_val() {
     float dms_val = dms.read();
     char dms_flag = 0;
 
-	#if !TFT_DISPLAY
-		pc.printf("DMS Read Value: %f\n", dms_val);
-	#endif
-
     if (dms_val <= DMS_THRESH){
         dms_flag = 1;
     }
@@ -207,11 +182,6 @@ char get_dms_val() {
     return dms_flag;
 }
 
-#pragma endregion
-
-#pragma region Display
-
-#if TFT_DISPLAY
 
 // display macros
 
@@ -244,9 +214,9 @@ char get_dms_val() {
 #define VOLTAGE_BTN_HEIGHT 10
 
 // speed
-#define SPEED_X 100
+#define SPEED_X 110
 #define SPEED_Y 80
-#define SPEED_UNIT_OFFSET 60
+#define SPEED_UNIT_OFFSET 50
 #define LARGE_FONT Arial28x28
 #define SMALL_FONT Arial12x12
 
@@ -263,6 +233,9 @@ char get_dms_val() {
 #define SECONDS_X 170
 #define TIME_Y 180
 
+// throttle debug
+#define THROTTLE_RAW_X 10
+#define THROTTLE_RAW_Y 210
 
 
 // display data cache
@@ -279,7 +252,7 @@ char _lastBrakeVal = 0;
 
 void listen_reset_gesture() {
 	char thisGesture = ignition.read();
-	float thisGestureTime = timerDisplay.read();
+	int thisGestureTime = timerDisplay.read_ms();
 	if (_lastGestureTime + DEBOUNCE_TIME < thisGestureTime && _lastGesture != thisGesture) {
 
 		if (thisGestureTime <= _lastGestureTime + GESTURE_MARGIN) {
@@ -319,7 +292,7 @@ void display_task() {
 
 		// Update Brake
 		if (_lastBrakeVal != _brakeVal) {
-			if (_brakeVal) {
+			if (!_brakeVal) {
 				TFT.fillcircle(BRAKE_X + CIRCLE_X_OFFSET_BRAKE, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Green);
 			} else {
 				TFT.fillcircle(BRAKE_X + CIRCLE_X_OFFSET_BRAKE, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Red);
@@ -347,24 +320,26 @@ void display_task() {
 
 		// Update Speed
 		if (_lastSpeed != _currentSpeed) {
-			TFT.locate(SPEED_X, SPEED_Y);
-			TFT.printf("%u", _currentSpeed);
 			_lastSpeed = _currentSpeed;
+			TFT.locate(SPEED_X, SPEED_Y);
+			TFT.printf("%02u", _currentSpeed);
 		}
 
 		// Update Power
 
 		if(_lastThrottle != _currentThrottle) {
-			TFT.locate(POWER_X + POWER_X_OFFSET, POWER_Y);
-			TFT.printf("%u", (_currentThrottle * 100) / 255);
 			_lastThrottle = _currentThrottle;
+			printf("Throttle %d\n", _currentThrottle);
+			TFT.locate(POWER_X + POWER_X_OFFSET, POWER_Y);
+			TFT.printf("%03u", (_currentThrottle * 100) / 255);
+			
 		}
 
 		// Update Time
-		int currentTime = static_cast<int>(timerDisplay.read());
+		int currentTime = timerDisplay.read_ms() / 1000;
 		if (currentTime > _lastTime) {
-			int minutes = static_cast<int>(currentTime) / 60;
-			int seconds = static_cast<int>(currentTime) % 60;
+			int minutes = currentTime / 60;
+			int seconds = currentTime % 60;
 
 			if (_lastMinutes ^ minutes) {
 				const char* padding = minutes < 10 ? "0" : "";
@@ -382,26 +357,18 @@ void display_task() {
 			}
 		}
 
-		#if DEBUG_THROTTLE
-		float throttleReadings = throttle.read();
-		unsigned char throttleVal = get_throttle_val();
-		string padding = "";
-		if (throttleVal < 10) {
-			padding = "00";
-		} else if (throttleVal < 100) {
-			padding = "0";
-		}
-		TFT.locate(SPEED_X, SPEED_Y);
-		TFT.printf("%.4f", throttleReadings);
-		TFT.locate(SPEED_X, SPEED_Y + 40);
-		TFT.printf("%s%u", padding.c_str(), throttleVal);
-		#else
 		// Update Speed
 		if (_lastSpeed != _currentSpeed) {
 			TFT.locate(SPEED_X, SPEED_Y);
-			TFT.printf("%u", _currentSpeed);
+			TFT.printf("%02u", _currentSpeed);
 			_lastSpeed = _currentSpeed;
 		}
+
+		#if DEBUG_THROTTLE
+
+			TFT.locate(THROTTLE_RAW_X, THROTTLE_RAW_Y);
+			TFT.printf("%4u", (unsigned int)(throttle.read() * 10000));
+
 		#endif
 	}
 }
@@ -424,7 +391,7 @@ void initialize_display(){
 	// brake
 	TFT.locate(BRAKE_X, STATUS_Y);
 	TFT.printf("BRK");
-	TFT.fillcircle(BRAKE_X + CIRCLE_X_OFFSET_BRAKE, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Red);
+	TFT.fillcircle(BRAKE_X + CIRCLE_X_OFFSET_BRAKE, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Green);
 	// voltage
 	TFT.locate(VOLTAGE_TEXT_X, VOLTAGE_TEXT_Y);
 	TFT.printf("00.00");
@@ -445,7 +412,7 @@ void initialize_display(){
 	TFT.locate(POWER_X, POWER_Y);
 	TFT.printf("PWR:");
 	TFT.locate(POWER_X + POWER_X_OFFSET, POWER_Y);
-	TFT.printf("0");
+	TFT.printf("000");
 	TFT.locate(POWER_X + POWER_X_UNIT_OFFSET, POWER_Y);
 	TFT.printf("%");
 	// time
@@ -456,18 +423,15 @@ void initialize_display(){
 	TFT.locate(SECONDS_X, TIME_Y);
 	TFT.printf("00");
 	
-	#if DEBUG_THROTTLE
-	// don't draw speed
-	#else
 	// speed
 	TFT.locate(SPEED_X, SPEED_Y);
-	TFT.printf("0");
+	TFT.printf("00");
 	TFT.locate(SPEED_X + SPEED_UNIT_OFFSET, SPEED_Y);
 	TFT.printf("km/h");
+
+	#if DEBUG_THROTTLE
+		TFT.locate(THROTTLE_RAW_X, THROTTLE_RAW_Y);
+		TFT.printf("0000");
 	#endif
 
 }
-
-#endif
-
-#pragma endregion
