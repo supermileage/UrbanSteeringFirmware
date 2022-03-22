@@ -8,19 +8,19 @@
         {
             "name": "PlatformIO",
             "includePath": [
-                "/Users/cosparks/projects/supermileage/urban-steering-firmware/include",
-                "/Users/cosparks/projects/supermileage/urban-steering-firmware/src",
-                "/Users/cosparks/.platformio/packages/framework-mbed",
-                "/Users/cosparks/projects/supermileage/urban-steering-firmware/.pio/build/nucleo_l432kc",
+                "/Users/silviu/git/UrbanSteeringFirmware/include",
+                "/Users/silviu/git/UrbanSteeringFirmware/src",
+                "/Users/silviu/.platformio/packages/framework-mbed",
+                "/Users/silviu/git/UrbanSteeringFirmware/.pio/build/nucleo_l432kc",
                 ""
             ],
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
-                    "/Users/cosparks/projects/supermileage/urban-steering-firmware/include",
-                    "/Users/cosparks/projects/supermileage/urban-steering-firmware/src",
-                    "/Users/cosparks/.platformio/packages/framework-mbed",
-                    "/Users/cosparks/projects/supermileage/urban-steering-firmware/.pio/build/nucleo_l432kc",
+                    "/Users/silviu/git/UrbanSteeringFirmware/include",
+                    "/Users/silviu/git/UrbanSteeringFirmware/src",
+                    "/Users/silviu/.platformio/packages/framework-mbed",
+                    "/Users/silviu/git/UrbanSteeringFirmware/.pio/build/nucleo_l432kc",
                     ""
                 ]
             },
@@ -88,18 +88,18 @@
             "cStandard": "c11",
             "cppStandard": "c++14",
             "forcedInclude": [
-                "/Users/cosparks/projects/supermileage/urban-steering-firmware/.pio/build/nucleo_l432kc/mbed_config.h",
+                "/Users/silviu/git/UrbanSteeringFirmware/.pio/build/nucleo_l432kc/mbed_config.h",
                 ""
             ],
-            "compilerPath": "/Users/cosparks/.platformio/packages/toolchain-gccarmnoneeabi/bin/arm-none-eabi-gcc",
+            "compilerPath": "/Users/silviu/.platformio/packages/toolchain-gccarmnoneeabi/bin/arm-none-eabi-gcc",
             "compilerArgs": [
                 "-mcpu=cortex-m4",
                 "-mfloat-abi=softfp",
                 "-mfpu=fpv4-sp-d16",
                 "-mthumb",
                 "-iprefix",
-                "/Users/cosparks/.platformio/packages/framework-mbed",
-                "@/Users/cosparks/projects/supermileage/urban-steering-firmware/.pio/build/nucleo_l432kc/longinc-cb2b7dba04a980ef02e601e63ac71f2a",
+                "/Users/silviu/.platformio/packages/framework-mbed",
+                "@/Users/silviu/git/UrbanSteeringFirmware/.pio/build/nucleo_l432kc/longinc-cb2b7dba04a980ef02e601e63ac71f2a",
                 ""
             ]
         }
