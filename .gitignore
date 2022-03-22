@@ -1,3 +1,6 @@
 build
 .vscode
 .pio
+.DS_Store
+*.swp
+*.bin
