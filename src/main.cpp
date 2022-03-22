@@ -224,7 +224,7 @@ char get_dms_val() {
 #define CIRCLE_X_OFFSET_BRAKE  14
 
 // voltage
-#define VOLTAGE_TEXT_X 258
+#define VOLTAGE_TEXT_X 260
 #define VOLTAGE_TEXT_Y STATUS_Y + 17
 #define VOLTAGE_UNIT_OFFSET 41
 #define VOLTAGE_LEFT_X 150
