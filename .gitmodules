@@ -1,0 +1,3 @@
+[submodule "lib/can-common"]
+	path = lib/can-common
+	url = git@github.com:supermileage/can-common.git
