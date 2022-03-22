@@ -15,6 +15,8 @@ using namespace std;
 
 #pragma region Macros
 
+#define DEBUG_THROTTLE 1
+
 #define TFT_DISPLAY 1
 #define DMS_THRESH 0.1f
 #define ACCESSORIES_TRANSMIT_INTERVAL 0.05f
@@ -24,8 +26,8 @@ using namespace std;
 #define GESTURE_MARGIN 0.5f
 #define MIN_THROTTLE_OUTPUT 0.0f
 #define MAX_THROTTLE_OUTPUT 255.0f
-#define MIN_THROTTLE_INPUT 0.28f
-#define MAX_THROTTLE_INPUT 0.425f
+#define MIN_THROTTLE_INPUT 0.35f
+#define MAX_THROTTLE_INPUT 0.455f
 #define SLOPE (MAX_THROTTLE_OUTPUT - MIN_THROTTLE_OUTPUT) / (MAX_THROTTLE_INPUT - MIN_THROTTLE_INPUT)
 #define OFFSET MAX_THROTTLE_OUTPUT - (SLOPE * MAX_THROTTLE_INPUT)
 
@@ -102,11 +104,12 @@ int main() {
         if (timerAccessories.read() > ACCESSORIES_TRANSMIT_INTERVAL){
 			char hazardsOn;
             curr_dataStr = read_accessory_inputs(hazardsOn);
-            if ((curr_dataStr ^ prev_dataStr)) {
+            if ((curr_dataStr != prev_dataStr)) {
 				// turn hazards off
 				if (hazardsOn) {
 					const unsigned char data[] = { 0x2, 0x4 << 1, 0x5 << 1 };
 					can.write(CANMessage(CAN_ACC_OPERATION, data, 3));
+					wait(0.001);
 				}
                 const char data[] = {0, curr_dataStr};
                 can.write(CANMessage(CAN_ACC_OPERATION, data, 2));
@@ -151,7 +154,7 @@ char read_accessory_inputs(char& hazardsVal){
 void handle_motor_inputs(){
     _dmsVal = get_dms_val();
     _ignitionVal = (char)ignition.read();
-    char brakeVal = (char)brake.read();
+    char brakeVal = (char)!brake.read();
 	
     unsigned char throttleVal = 0;
     
@@ -335,13 +338,27 @@ void display_task() {
 			}
 		}
 
+		#if DEBUG_THROTTLE
+		float throttleReadings = throttle.read();
+		unsigned char throttleVal = get_throttle_val();
+		string padding = "";
+		if (throttleVal < 10) {
+			padding = "00";
+		} else if (throttleVal < 100) {
+			padding = "0";
+		}
+		TFT.locate(SPEED_X, SPEED_Y);
+		TFT.printf("%.4f", throttleReadings);
+		TFT.locate(SPEED_X, SPEED_Y + 40);
+		TFT.printf("%s%u", padding.c_str(), throttleVal);
+		#else
 		// Update Speed
 		if (_lastSpeed != _currentSpeed) {
 			TFT.locate(SPEED_X, SPEED_Y);
 			TFT.printf("%u", _currentSpeed);
 			_lastSpeed = _currentSpeed;
 		}
-
+		#endif
 	}
 }
 
@@ -377,11 +394,16 @@ void initialize_display(){
 	TFT.printf(":");
 	TFT.locate(SECONDS_X, TIME_Y);
 	TFT.printf("00");
+	
+	#if DEBUG_THROTTLE
+	// don't draw speed
+	#else
 	// speed
 	TFT.locate(SPEED_X, SPEED_Y);
 	TFT.printf("0");
 	TFT.locate(SPEED_X + SPEED_UNIT_OFFSET, SPEED_Y);
 	TFT.printf("km/h");
+	#endif
 
 }
 
