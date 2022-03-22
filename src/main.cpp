@@ -9,20 +9,25 @@
 #include "main.h"
 
 #include <string>
+#include <cmath>
 
 using namespace std;
 
 #pragma region Macros
 
+#define DEBUG_THROTTLE 1
+
 #define TFT_DISPLAY 1
 #define DMS_THRESH 0.1f
-#define ACCESSORIES_TRANSMIT_INTERVAL 0.2f
+#define ACCESSORIES_TRANSMIT_INTERVAL 0.05f
 #define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 0.05f
 
+#define DEBOUNCE_TIME 0.05f
+#define GESTURE_MARGIN 0.5f
 #define MIN_THROTTLE_OUTPUT 0.0f
 #define MAX_THROTTLE_OUTPUT 255.0f
-#define MIN_THROTTLE_INPUT 0.28f
-#define MAX_THROTTLE_INPUT 0.425f
+#define MIN_THROTTLE_INPUT 0.35f
+#define MAX_THROTTLE_INPUT 0.455f
 #define SLOPE (MAX_THROTTLE_OUTPUT - MIN_THROTTLE_OUTPUT) / (MAX_THROTTLE_INPUT - MIN_THROTTLE_INPUT)
 #define OFFSET MAX_THROTTLE_OUTPUT - (SLOPE * MAX_THROTTLE_INPUT)
 
@@ -41,7 +46,7 @@ CAN can(D10, D2, 500000);
 
 // Accessories
 DigitalIn lights(A0,PullDown);
-DigitalIn brake(D1,PullDown);
+DigitalIn brake(D1,PullUp);
 DigitalIn horn(D5,PullDown);
 DigitalIn hazards(D9,PullDown);
 DigitalIn rightBlinker(D4,PullDown);
@@ -53,50 +58,64 @@ DigitalIn ignition(D6,PullDown);
 AnalogIn dms(A1);
 AnalogIn throttle(A6);
 
-Timer timer_MTR;
-Timer timer_TEL;
-Timer timer_ACC;
+Timer timerMotor;
+Timer timerDisplay;
+Timer timerAccessories;
 
-// globals shared between main and display threads
+// globals variables shared between main and display threads
 unsigned _currentSpeed = 0;
 float _currentBmsSoc = 0.0f;
 float _currentBmsVoltage = 0.0f;
+float _lastGestureTime = 0.0f;
 unsigned long _startTime = 0;
 char _ignitionVal = 0;
 char _dmsVal = 0;
+char _lastGesture = 0;
 
 #pragma endregion
 
 int main() {
-    timer_MTR.start();
-    timer_TEL.start();
-    timer_ACC.start();
-    uint8_t prev_dataStr = ACC_task();
+    timerMotor.start();
+    timerDisplay.start();
+    timerAccessories.start();
+	char dummy;
+    uint8_t prev_dataStr = read_accessory_inputs(dummy);
     uint8_t curr_dataStr = 0;
     CANMessage msg;
 	_startTime = time(NULL);
 
 	#if TFT_DISPLAY
 		initialize_display();
-		Thread display_thread(display_task);
+		Thread display_thread;
+		display_thread.start(display_task);
 	#endif
 
     while(1){
+		// check for time-reset gesture
+		listen_reset_gesture();
+
 		// Handle motor controller
-		if (timer_MTR.read() > MOTOR_CONTROLLER_TRANSMIT_INTERVAL) {
-            MTR_task();
-            timer_MTR.reset();
+		if (timerMotor.read() > MOTOR_CONTROLLER_TRANSMIT_INTERVAL) {
+            handle_motor_inputs();
+            timerMotor.reset();
         }
 
 		// Handle accessories
-        if (timer_ACC.read() > ACCESSORIES_TRANSMIT_INTERVAL){
-            curr_dataStr = ACC_task();
-            if ((curr_dataStr ^ prev_dataStr)) {
+        if (timerAccessories.read() > ACCESSORIES_TRANSMIT_INTERVAL){
+			char hazardsOn;
+            curr_dataStr = read_accessory_inputs(hazardsOn);
+            if ((curr_dataStr != prev_dataStr)) {
+				// turn hazards off
+				if (hazardsOn) {
+					const unsigned char data[] = { 0x2, 0x4 << 1, 0x5 << 1 };
+					can.write(CANMessage(CAN_ACC_OPERATION, data, 3));
+					wait(0.001);
+				}
                 const char data[] = {0, curr_dataStr};
                 can.write(CANMessage(CAN_ACC_OPERATION, data, 2));
                 prev_dataStr = curr_dataStr;
             }
-            timer_ACC.reset();
+            timerAccessories.reset();
         }
 
 		// Check for gps speed / bms data updates from telemetry
@@ -113,33 +132,30 @@ int main() {
 
 #pragma region Can
 
-char ACC_task(){
+char read_accessory_inputs(char& hazardsVal){
     char lightsVal = (char)(lights.read());
 	char brakeVal = (char)(!brake.read());
     char hornVal = (char)(horn.read());
-    char hazardVal = (char)(hazards.read());
+    hazardsVal = (char)(hazards.read());
     char rightbVal = (char)(rightBlinker.read());
     char leftbVal = (char)(leftBlinker.read());
     char wiperVal = (char)(wipers.read());
 
-	// turn off blinkers when hazards are on -- 0x4 == right blinker id -- 0x5 == left blinker id 
-    if (hazardVal && (leftbVal | rightbVal)) {
-		const unsigned char data[] = { 0x2, 0x4 << 1, 0x5 << 1 };
-		can.write(CANMessage(CAN_ACC_OPERATION, data, 3));
-		
-        leftbVal = 1;
+	// hazards on == both blinkers turned on at the same time
+    if (hazardsVal) {
+		leftbVal = 1;
         rightbVal = 1;
     }
 
-    char dataStr = (wiperVal << 6) | (leftbVal << 5) | (rightbVal << 4) | (hazardVal << 3) | (hornVal << 2) | (brakeVal << 1) | lightsVal;
+    char dataStr = (wiperVal << 6) | (leftbVal << 5) | (rightbVal << 4) | (hazardsVal << 3) | (hornVal << 2) | (brakeVal << 1) | lightsVal;
     return dataStr;
 }
 
-void MTR_task(){
+void handle_motor_inputs(){
     _dmsVal = get_dms_val();
     _ignitionVal = (char)ignition.read();
     char brakeVal = (char)!brake.read();
-
+	
     unsigned char throttleVal = 0;
     
     if (_dmsVal && _ignitionVal && !brakeVal) {
@@ -233,22 +249,37 @@ char get_dms_val() {
 #define SMALL_FONT Arial12x12
 
 // display data cache
-unsigned long _lastTime = 0;
+int _lastTime = 0;
 unsigned _lastSpeed = 0;
-float _lastBmsSoc = 0.0f;
-float _lastBmsVoltage = 0.0f;
+float _lastBmsSoc = 0;
+float _lastBmsVoltage = 0;
 unsigned _lastMinutes = 0;
 unsigned _lastSeconds = 0;
 char _lastDmsVal = 0;
 char _lastIgnitionVal = 0;
 
-void display_task(const void* arg) {
+void listen_reset_gesture() {
+	char thisGesture = ignition.read();
+	float thisGestureTime = timerDisplay.read();
+	if (_lastGestureTime + DEBOUNCE_TIME < thisGestureTime && _lastGesture != thisGesture) {
+
+		if (thisGestureTime <= _lastGestureTime + GESTURE_MARGIN) {
+			_lastTime = -1;
+			_lastGestureTime = 0;
+			timerDisplay.reset();
+		} else {
+			_lastGestureTime = thisGestureTime;
+		}
+	}
+	_lastGesture = thisGesture;
+}
+
+void display_task() {
 	while (true) {
-		unsigned long currentTime = time(NULL);
 		TFT.set_font((unsigned char*) SMALL_FONT);
 
 		// Update DMS
-		if (_lastDmsVal ^ _dmsVal) {
+		if (_lastDmsVal != _dmsVal) {
 			if (_dmsVal) {
     			TFT.fillcircle(DMS_X + CIRCLE_X_OFFSET_DMS, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Green);
 			} else {
@@ -256,8 +287,9 @@ void display_task(const void* arg) {
 			}
 			_lastDmsVal = _dmsVal;
 		}
+
 		// Update Ignition
-		if (_lastIgnitionVal ^ _ignitionVal) {
+		if (_lastIgnitionVal != _ignitionVal) {
 			if (_ignitionVal) {
 				TFT.fillcircle(IGNITION_X + CIRCLE_X_OFFSET_IGNITION, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Green);
 			} else {
@@ -265,6 +297,7 @@ void display_task(const void* arg) {
 			}
 			_lastIgnitionVal = _ignitionVal;
 		}
+
 		// Update voltage
 		if (_lastBmsVoltage != _currentBmsVoltage) {
 			// update text
@@ -279,13 +312,15 @@ void display_task(const void* arg) {
 			TFT.fillrect(VOLTAGE_LEFT_X + VOLTAGE_PADDING, VOLTAGE_LEFT_Y + VOLTAGE_PADDING, VOLTAGE_LEFT_X - VOLTAGE_PADDING + rectangleWidth , VOLTAGE_RIGHT_Y - VOLTAGE_PADDING, Green);
 			TFT.fillrect(VOLTAGE_LEFT_X + VOLTAGE_PADDING + rectangleWidth, VOLTAGE_LEFT_Y + VOLTAGE_PADDING, VOLTAGE_RIGHT_X - VOLTAGE_PADDING, VOLTAGE_RIGHT_Y - VOLTAGE_PADDING, Black);
 		}
-		wait(0.125);
 
+		// Set font size for large test display
 		TFT.set_font((unsigned char*) LARGE_FONT);
+
 		// Update Time
-		if (_lastTime ^ currentTime) {
-			unsigned minutes = currentTime / 60;
-			unsigned seconds = currentTime % 60;
+		int currentTime = static_cast<int>(timerDisplay.read());
+		if (currentTime > _lastTime) {
+			int minutes = static_cast<int>(currentTime) / 60;
+			int seconds = static_cast<int>(currentTime) % 60;
 
 			if (_lastMinutes ^ minutes) {
 				const char* padding = minutes < 10 ? "0" : "";
@@ -302,13 +337,28 @@ void display_task(const void* arg) {
 				_lastSeconds = seconds;
 			}
 		}
+
+		#if DEBUG_THROTTLE
+		float throttleReadings = throttle.read();
+		unsigned char throttleVal = get_throttle_val();
+		string padding = "";
+		if (throttleVal < 10) {
+			padding = "00";
+		} else if (throttleVal < 100) {
+			padding = "0";
+		}
+		TFT.locate(SPEED_X, SPEED_Y);
+		TFT.printf("%.4f", throttleReadings);
+		TFT.locate(SPEED_X, SPEED_Y + 40);
+		TFT.printf("%s%u", padding.c_str(), throttleVal);
+		#else
 		// Update Speed
-		if (_lastSpeed ^ _currentSpeed) {
+		if (_lastSpeed != _currentSpeed) {
 			TFT.locate(SPEED_X, SPEED_Y);
 			TFT.printf("%u", _currentSpeed);
 			_lastSpeed = _currentSpeed;
 		}
-		wait(0.125);
+		#endif
 	}
 }
 
@@ -344,11 +394,16 @@ void initialize_display(){
 	TFT.printf(":");
 	TFT.locate(SECONDS_X, TIME_Y);
 	TFT.printf("00");
+	
+	#if DEBUG_THROTTLE
+	// don't draw speed
+	#else
 	// speed
 	TFT.locate(SPEED_X, SPEED_Y);
 	TFT.printf("0");
 	TFT.locate(SPEED_X + SPEED_UNIT_OFFSET, SPEED_Y);
 	TFT.printf("km/h");
+	#endif
 
 }
 

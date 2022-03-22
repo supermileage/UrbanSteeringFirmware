@@ -9,14 +9,14 @@
  * 
  * @return char bit shifted on/off values for each accessory (sent to CanAccessories board in Op Mode 0)
  */
-char ACC_task();
+char read_accessory_inputs(char& hazardsVal);
 
 /**
  * @brief Processes current state of throttle, depending on ignition, brakes and dms.  Will send a CAN message 
  * to motor controller with throttle data, and another to telemetry indicating states of ignition, dms, etc..
  * 
  */
-void MTR_task();
+void handle_motor_inputs();
 
 /**
  * @brief Read dead man's switch
@@ -37,12 +37,14 @@ unsigned char get_throttle_val();
  * 
  * @param arg unused task arg
  */
-void display_task(const void* arg);
+void display_task();
 
 /**
  * @brief Initializes LCD display
  * 
  */
 void initialize_display();
+
+void listen_reset_gesture();
 
 #endif
