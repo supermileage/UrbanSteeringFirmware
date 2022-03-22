@@ -1,3 +1,7 @@
 build
+<<<<<<< HEAD
 .vscode
 .pio
+=======
+.pio/
+>>>>>>> main
