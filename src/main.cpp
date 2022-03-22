@@ -64,10 +64,12 @@ Timer timerAccessories;
 unsigned _currentSpeed = 0;
 float _currentBmsSoc = 0.0f;
 float _currentBmsVoltage = 0.0f;
+uint8_t _currentThrottle = 0;
 float _lastGestureTime = 0.0f;
 unsigned long _startTime = 0;
 char _ignitionVal = 0;
 char _dmsVal = 0;
+char _brakeVal = 0;
 char _lastGesture = 0;
 
 #pragma endregion
@@ -151,12 +153,12 @@ char read_accessory_inputs(char& hazardsVal){
 void handle_motor_inputs(){
     _dmsVal = get_dms_val();
     _ignitionVal = (char)ignition.read();
-    char brakeVal = (char)brake.read();
+    _brakeVal = (char)brake.read();
 	
-    unsigned char throttleVal = 0;
+    _currentThrottle = get_throttle_val();
     
-    if (_dmsVal && _ignitionVal && !brakeVal) {
-        throttleVal = get_throttle_val();
+    if (!_dmsVal || !_ignitionVal || !_brakeVal) {
+        _currentThrottle = 0;
     }
 
 	#if !TFT_DISPLAY
@@ -164,11 +166,11 @@ void handle_motor_inputs(){
 	#endif
 
 	// Throttle Data
-	const unsigned char throttleData[] = { throttleVal };
+	const unsigned char throttleData[] = { _currentThrottle };
     can.write(CANMessage(CAN_STEERING_THROTTLE, throttleData, 1));
 
 	// Ready Data
-    char readyVal = (brakeVal << 2) | (_dmsVal << 1) | _ignitionVal;
+    char readyVal = (_brakeVal << 2) | (_dmsVal << 1) | _ignitionVal;
     const char readyData[] = { readyVal };
     can.write(CANMessage(CAN_STEERING_READY, readyData, 1));
 }
@@ -211,13 +213,15 @@ char get_dms_val() {
 // display macros
 
 // accessories
-#define DMS_X 17
-#define IGNITION_X 83
+#define DMS_X 10
+#define IGNITION_X 60
+#define BRAKE_X		100
 #define STATUS_Y 5
 #define CIRCLE_RADIUS 10
 #define CIRCLE_Y_OFFSET CIRCLE_RADIUS * 3
 #define CIRCLE_X_OFFSET_DMS  14
 #define CIRCLE_X_OFFSET_IGNITION  10
+#define CIRCLE_X_OFFSET_BRAKE  14
 
 // voltage
 #define VOLTAGE_TEXT_X 258
@@ -231,29 +235,39 @@ char get_dms_val() {
 #define VOLTAGE_RIGHT_Y VOLTAGE_LEFT_Y + VOLTAGE_HEIGHT
 #define VOLTAGE_PADDING 3
 
-// time
-#define MINUTES_X 100
-#define MINUTES_OFFSET 25
-#define COLON_X 150
-#define SECONDS_X 175
-#define TIME_Y 100
-
 // speed
 #define SPEED_X 100
-#define SPEED_Y 165
+#define SPEED_Y 80
 #define SPEED_UNIT_OFFSET 60
 #define LARGE_FONT Arial28x28
 #define SMALL_FONT Arial12x12
 
+// power
+#define POWER_X 60
+#define POWER_X_OFFSET 90
+#define POWER_X_UNIT_OFFSET	150
+#define POWER_Y 130
+
+// time
+#define MINUTES_X 105
+#define MINUTES_OFFSET 25
+#define COLON_X 150
+#define SECONDS_X 170
+#define TIME_Y 180
+
+
+
 // display data cache
 int _lastTime = 0;
 unsigned _lastSpeed = 0;
+uint8_t _lastThrottle = 0;
 float _lastBmsSoc = 0;
 float _lastBmsVoltage = 0;
 unsigned _lastMinutes = 0;
 unsigned _lastSeconds = 0;
 char _lastDmsVal = 0;
 char _lastIgnitionVal = 0;
+char _lastBrakeVal = 0;
 
 void listen_reset_gesture() {
 	char thisGesture = ignition.read();
@@ -295,6 +309,16 @@ void display_task() {
 			_lastIgnitionVal = _ignitionVal;
 		}
 
+		// Update Brake
+		if (_lastBrakeVal != _brakeVal) {
+			if (_brakeVal) {
+				TFT.fillcircle(BRAKE_X + CIRCLE_X_OFFSET_BRAKE, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Green);
+			} else {
+				TFT.fillcircle(BRAKE_X + CIRCLE_X_OFFSET_BRAKE, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Red);
+			}
+			_lastBrakeVal = _brakeVal;
+		}
+
 		// Update voltage
 		if (_lastBmsVoltage != _currentBmsVoltage) {
 			// update text
@@ -312,6 +336,21 @@ void display_task() {
 
 		// Set font size for large test display
 		TFT.set_font((unsigned char*) LARGE_FONT);
+
+		// Update Speed
+		if (_lastSpeed != _currentSpeed) {
+			TFT.locate(SPEED_X, SPEED_Y);
+			TFT.printf("%u", _currentSpeed);
+			_lastSpeed = _currentSpeed;
+		}
+
+		// Update Power
+
+		if(_lastThrottle != _currentThrottle) {
+			TFT.locate(POWER_X + POWER_X_OFFSET, POWER_Y);
+			TFT.printf("%u", (_currentThrottle * 100) / 255);
+			_lastThrottle = _currentThrottle;
+		}
 
 		// Update Time
 		int currentTime = static_cast<int>(timerDisplay.read());
@@ -335,13 +374,6 @@ void display_task() {
 			}
 		}
 
-		// Update Speed
-		if (_lastSpeed != _currentSpeed) {
-			TFT.locate(SPEED_X, SPEED_Y);
-			TFT.printf("%u", _currentSpeed);
-			_lastSpeed = _currentSpeed;
-		}
-
 	}
 }
 
@@ -360,6 +392,10 @@ void initialize_display(){
 	TFT.locate(IGNITION_X, STATUS_Y);
 	TFT.printf("IGN");
 	TFT.fillcircle(IGNITION_X + CIRCLE_X_OFFSET_IGNITION, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Red);
+	// brake
+	TFT.locate(BRAKE_X, STATUS_Y);
+	TFT.printf("BRK");
+	TFT.fillcircle(BRAKE_X + CIRCLE_X_OFFSET_BRAKE, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Red);
 	// voltage
 	TFT.locate(VOLTAGE_TEXT_X, VOLTAGE_TEXT_Y);
 	TFT.printf("00.00");
@@ -370,6 +406,18 @@ void initialize_display(){
 	
 	// Large font values
 	TFT.set_font((unsigned char*) LARGE_FONT);
+	// speed
+	TFT.locate(SPEED_X, SPEED_Y);
+	TFT.printf("0");
+	TFT.locate(SPEED_X + SPEED_UNIT_OFFSET, SPEED_Y);
+	TFT.printf("km/h");
+	// power
+	TFT.locate(POWER_X, POWER_Y);
+	TFT.printf("PWR:");
+	TFT.locate(POWER_X + POWER_X_OFFSET, POWER_Y);
+	TFT.printf("0");
+	TFT.locate(POWER_X + POWER_X_UNIT_OFFSET, POWER_Y);
+	TFT.printf("%");
 	// time
 	TFT.locate(MINUTES_X, TIME_Y);
 	TFT.printf("00");
@@ -377,11 +425,7 @@ void initialize_display(){
 	TFT.printf(":");
 	TFT.locate(SECONDS_X, TIME_Y);
 	TFT.printf("00");
-	// speed
-	TFT.locate(SPEED_X, SPEED_Y);
-	TFT.printf("0");
-	TFT.locate(SPEED_X + SPEED_UNIT_OFFSET, SPEED_Y);
-	TFT.printf("km/h");
+
 
 }
 
