@@ -158,10 +158,10 @@ void SPI_TFT_ILI9341::tft_reset()
 
     wait_us(50);
     _reset = 1;                       // end hardware reset
-    wait_ms(5);
+    wait_us(50000);
      
     wr_cmd(0x01);                     // SW reset  
-    wait_ms(5);
+    wait_us(50000);
     wr_cmd(0x28);                     // display off  
 
     /* Start Initial Sequence ----------------------------------------------------*/
@@ -297,12 +297,12 @@ void SPI_TFT_ILI9341::tft_reset()
      wr_cmd(0x11);                     // sleep out
      _cs = 1;
      
-     wait_ms(100);
+     wait_us(100000);
      
      wr_cmd(0x29);                     // display on
      _cs = 1;
      
-     wait_ms(100);
+     wait_us(100000);
      
  }
 
