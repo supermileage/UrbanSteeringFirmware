@@ -18,7 +18,7 @@ using namespace std;
 
 #define DEBUG_THROTTLE 0
 
-#define DMS_THRESH 0.1f
+#define DMS_THRESH 0.3f
 #define ACCESSORIES_TRANSMIT_INTERVAL 50
 #define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 50
 
@@ -205,21 +205,21 @@ char get_dms_val() {
 #define CIRCLE_X_OFFSET_BRAKE  		14
 
 // voltage
-#define VOLTAGE_TEXT_X 		260
-#define VOLTAGE_TEXT_Y 		STATUS_Y + 17
-#define VOLTAGE_UNIT_OFFSET 41
-#define VOLTAGE_LEFT_X 		150
-#define VOLTAGE_LEFT_Y 		11
-#define VOLTAGE_WIDTH 		100
-#define VOLTAGE_HEIGHT 		30
-#define VOLTAGE_RIGHT_X 	VOLTAGE_LEFT_X + VOLTAGE_WIDTH
-#define VOLTAGE_RIGHT_Y 	VOLTAGE_LEFT_Y + VOLTAGE_HEIGHT
-#define VOLTAGE_PADDING 	3
+#define BATTERY_TEXT_X 		260
+#define VOLTAGE_TEXT_Y 		STATUS_Y + 26
+#define SOC_TEXT_Y			STATUS_Y + 6
+#define BATTERY_LEFT_X 		150
+#define BATTERY_LEFT_Y 		11
+#define BATTERY_WIDTH 		100
+#define BATTERY_HEIGHT 		30
+#define BATTERY_RIGHT_X 	BATTERY_LEFT_X + BATTERY_WIDTH
+#define BATTERY_RIGHT_Y 	BATTERY_LEFT_Y + BATTERY_HEIGHT
+#define BATTERY_PADDING 	3
 
-#define VOLTAGE_BTN_X 		250
-#define VOLTAGE_BTN_Y 		20
-#define VOLTAGE_BTN_WIDTH 	2
-#define VOLTAGE_BTN_HEIGHT 	10
+#define BATTERY_BTN_X 		250
+#define BATTERY_BTN_Y 		20
+#define BATTERY_BTN_WIDTH 	2
+#define BATTERY_BTN_HEIGHT 	10
 
 // speed
 #define SPEED_X_LABEL 50
@@ -239,8 +239,8 @@ char get_dms_val() {
 #define TIME_X_LABEL 	46
 #define TIME_Y_LABEL 	198
 #define MINUTES_X 		80
-#define COLON_X			150
-#define SECONDS_X 		165
+#define COLON_X			160
+#define SECONDS_X 		185
 #define TIME_Y 			180
 
 // throttle debug
@@ -312,17 +312,24 @@ void display_task() {
 
 		// Update voltage
 		if (_lastBmsVoltage != _currentBmsVoltage) {
-			// update text
-			const char* padding = _currentBmsVoltage < 10.0f ? "0" : "";
-			TFT.locate(VOLTAGE_TEXT_X, VOLTAGE_TEXT_Y);
-			TFT.printf("%s%.2f", padding, _currentBmsVoltage);
+			uint8_t voltageDecimal = (uint8_t)(_currentBmsVoltage * 10) % 10;
+			TFT.locate(BATTERY_TEXT_X, VOLTAGE_TEXT_Y);
+			TFT.printf("%02d.%d V", (uint8_t)_currentBmsVoltage, voltageDecimal);
 			_lastBmsVoltage = _currentBmsVoltage;
 
+			
+		}
+
+		// Update SOC
+		if (_lastBmsSoc != _currentBmsSoc) {
+			uint8_t socDecimal = (uint8_t)(_currentBmsSoc * 10) % 10;
+			TFT.locate(BATTERY_TEXT_X, SOC_TEXT_Y);
+			TFT.printf("%02d.%d %", (uint8_t)_currentBmsSoc, socDecimal);
 			// redraw rectangle
-			// float voltage = _currentBmsVoltage > 0.0f ? _currentBmsVoltage : -_currentBmsVoltage; // might not be necessary, unless negative voltage is possible?
-			int rectangleWidth = (int)(_currentBmsSoc / 100.0f * (float)VOLTAGE_WIDTH);
-			TFT.fillrect(VOLTAGE_LEFT_X + VOLTAGE_PADDING, VOLTAGE_LEFT_Y + VOLTAGE_PADDING, VOLTAGE_LEFT_X - VOLTAGE_PADDING + rectangleWidth , VOLTAGE_RIGHT_Y - VOLTAGE_PADDING, Green);
-			TFT.fillrect(VOLTAGE_LEFT_X + VOLTAGE_PADDING + rectangleWidth, VOLTAGE_LEFT_Y + VOLTAGE_PADDING, VOLTAGE_RIGHT_X - VOLTAGE_PADDING, VOLTAGE_RIGHT_Y - VOLTAGE_PADDING, Black);
+			int rectangleWidth = (int)(_currentBmsSoc / 100.0f * (float)BATTERY_WIDTH);
+			TFT.fillrect(BATTERY_LEFT_X + BATTERY_PADDING, BATTERY_LEFT_Y + BATTERY_PADDING, BATTERY_LEFT_X - BATTERY_PADDING + rectangleWidth , BATTERY_RIGHT_Y - BATTERY_PADDING, Green);
+			TFT.fillrect(BATTERY_LEFT_X + BATTERY_PADDING + rectangleWidth, BATTERY_LEFT_Y + BATTERY_PADDING, BATTERY_RIGHT_X - BATTERY_PADDING, BATTERY_RIGHT_Y - BATTERY_PADDING, Black);
+			_lastBmsSoc = _currentBmsSoc;
 		}
 
 		// Set font size for large test display
@@ -396,13 +403,13 @@ void initialize_display(){
 	TFT.printf("BRK");
 	TFT.fillcircle(BRAKE_X + CIRCLE_X_OFFSET_BRAKE, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Green);
 	// voltage
-	TFT.locate(VOLTAGE_TEXT_X, VOLTAGE_TEXT_Y);
-	TFT.printf("00.00");
-	TFT.locate(VOLTAGE_TEXT_X + VOLTAGE_UNIT_OFFSET, VOLTAGE_TEXT_Y);
-	TFT.printf("V");
-	TFT.rect(VOLTAGE_LEFT_X, VOLTAGE_LEFT_Y, VOLTAGE_LEFT_X + VOLTAGE_WIDTH, VOLTAGE_LEFT_Y + VOLTAGE_HEIGHT, White);
-	TFT.fillrect(VOLTAGE_LEFT_X + VOLTAGE_PADDING, VOLTAGE_LEFT_Y + VOLTAGE_PADDING, VOLTAGE_RIGHT_X - VOLTAGE_PADDING, VOLTAGE_RIGHT_Y - VOLTAGE_PADDING, Green);
-	TFT.rect(VOLTAGE_BTN_X, VOLTAGE_BTN_Y, VOLTAGE_BTN_X + VOLTAGE_BTN_WIDTH, VOLTAGE_BTN_Y + VOLTAGE_BTN_HEIGHT, White);
+	TFT.locate(BATTERY_TEXT_X, SOC_TEXT_Y);
+	TFT.printf("00.0 %");
+	TFT.locate(BATTERY_TEXT_X, VOLTAGE_TEXT_Y);
+	TFT.printf("00.0 V");
+	TFT.rect(BATTERY_LEFT_X, BATTERY_LEFT_Y, BATTERY_LEFT_X + BATTERY_WIDTH, BATTERY_LEFT_Y + BATTERY_HEIGHT, White);
+	TFT.fillrect(BATTERY_LEFT_X + BATTERY_PADDING, BATTERY_LEFT_Y + BATTERY_PADDING, BATTERY_RIGHT_X - BATTERY_PADDING, BATTERY_RIGHT_Y - BATTERY_PADDING, Green);
+	TFT.rect(BATTERY_BTN_X, BATTERY_BTN_Y, BATTERY_BTN_X + BATTERY_BTN_WIDTH, BATTERY_BTN_Y + BATTERY_BTN_HEIGHT, White);
 
 	// Labels
 	TFT.locate(SPEED_X_LABEL, SPEED_Y_LABEL);
@@ -418,7 +425,7 @@ void initialize_display(){
 	TFT.locate(SPEED_X, SPEED_Y);
 	TFT.printf("00");
 	TFT.locate(SPEED_X + SPEED_X_UNIT_OFFSET, SPEED_Y);
-	TFT.printf("km/h");
+	TFT.printf("K/H");
 
 	// power
 	TFT.locate(POWER_X, POWER_Y);
