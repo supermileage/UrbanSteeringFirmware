@@ -4,6 +4,12 @@
 #include "stdio.h"
 #include "mbed.h"
 
+
+/**
+ * @brief handles all accessories-related tasks
+ */
+void handle_accessories();
+
 /**
  * @brief Called when any button on steering is switched on/off
  * 
@@ -40,11 +46,19 @@ unsigned char get_throttle_val();
 void display_task();
 
 /**
+ * @brief reads incoming can messages and updates speed and battery values for display
+ */
+void receive_can();
+
+/**
  * @brief Initializes LCD display
  * 
  */
 void initialize_display();
 
-void listen_reset_gesture();
+/**
+ * @brief checks for and handles time reset gesture
+ */
+void handle_reset_gesture();
 
 #endif
