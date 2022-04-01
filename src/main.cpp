@@ -11,14 +11,15 @@
 #include "Arial12x12.h"
 #include "Arial28x28.h"
 #include "font_big.h"
-#include "supermileagelogo.h"
+#include "graphics.h"
 #include "main.h"
 
 using namespace std;
 
 #define DEBUG_THROTTLE 0
 
-#define DMS_THRESH 0.3f
+#define DMS_THRESH 	0.6f
+#define DMS_DELTA 	0.1f
 #define ACCESSORIES_TRANSMIT_INTERVAL 50
 #define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 50
 
@@ -48,12 +49,15 @@ DigitalIn wipers(A2,PullDown);
 DigitalIn ignition(D6,PullDown);
 AnalogIn dms(A1);
 AnalogIn throttle(A6);
+DigitalOut dmsLed(A5);
 
 Timer timerMotor;
 Timer timerDisplay;
 Timer timerAccessories;
+Timer timerFlash;
 
 // globals variables shared between main and display threads
+
 unsigned g_currentSpeed = 0;
 float g_currentBmsSoc = 0.0f;
 float g_currentBmsVoltage = 0.0f;
@@ -64,6 +68,9 @@ char g_ignitionVal = 0;
 char g_dmsVal = 0;
 char g_brakeVal = 0;
 char g_lastGesture = 0;
+char g_turnLeft = 0;
+char g_turnRight = 0;
+char g_lights = 0;
 
 int main() {
     timerMotor.start();
@@ -76,6 +83,8 @@ int main() {
 	initialize_display();
 	Thread display_thread;
 	display_thread.start(display_task);
+
+	dmsLed.write(1);
 
     while(1){
 		handle_reset_gesture();
@@ -108,21 +117,21 @@ void handle_accessories() {
 }
 
 char read_accessory_inputs(char& hazardsVal){
-    char lightsVal = (char)(lights.read());
+    g_lights = (char)(lights.read());
 	char brakeVal = (char)(!brake.read());
     char hornVal = (char)(horn.read());
     hazardsVal = (char)(hazards.read());
-    char rightbVal = (char)(rightBlinker.read());
-    char leftbVal = (char)(leftBlinker.read());
+    g_turnRight = (char)(rightBlinker.read());
+    g_turnLeft = (char)(leftBlinker.read());
     char wiperVal = (char)(wipers.read());
 
 	// hazards on == both blinkers turned on at the same time
     if (hazardsVal) {
-		leftbVal = 1;
-        rightbVal = 1;
+		g_turnLeft = 1;
+        g_turnRight = 1;
     }
 
-    char dataStr = (wiperVal << 6) | (leftbVal << 5) | (rightbVal << 4) | (hazardsVal << 3) | (hornVal << 2) | (brakeVal << 1) | lightsVal;
+    char dataStr = (wiperVal << 6) | (g_turnLeft << 5) | (g_turnRight << 4) | (hazardsVal << 3) | (hornVal << 2) | (brakeVal << 1) | g_lights;
     return dataStr;
 }
 
@@ -165,16 +174,13 @@ unsigned char get_throttle_val() {
 }
 
 char get_dms_val() {
+	float dms_ctrl = dms.read();
+	dmsLed.write(0);
+	wait_us(40);
     float dms_val = dms.read();
-    char dms_flag = 0;
+	dmsLed.write(1);
 
-    if (dms_val <= DMS_THRESH){
-        dms_flag = 1;
-    }
-    else if (dms_val > DMS_THRESH){
-        dms_flag = 0;
-	}
-    return dms_flag;
+    return dms_val <= DMS_THRESH && (dms_val < dms_ctrl - DMS_DELTA);
 }
 
 // Checks for gps speed / bms data updates from telemetry
@@ -229,29 +235,43 @@ void receive_can() {
 
 // speed
 #define SPEED_X_LABEL 50
-#define SPEED_Y_LABEL 98
+#define SPEED_Y_LABEL 103
 #define SPEED_X 80
 #define SPEED_X_UNIT_OFFSET 110
-#define SPEED_Y 80
+#define SPEED_Y 85
 
 // power
 #define POWER_X_LABEL 48
-#define POWER_Y_LABEL 148
+#define POWER_Y_LABEL 153
 #define POWER_X 80
 #define POWER_X_UNIT_OFFSET	110
-#define POWER_Y 130
+#define POWER_Y 135
 
 // time
 #define TIME_X_LABEL 	46
-#define TIME_Y_LABEL 	198
+#define TIME_Y_LABEL 	203
 #define MINUTES_X 		80
 #define COLON_X			160
 #define SECONDS_X 		185
-#define TIME_Y 			180
+#define TIME_Y 			185
 
 // throttle debug
 #define THROTTLE_RAW_X 10
 #define THROTTLE_RAW_Y 210
+
+// turn signals
+#define TURN_WIDTH		30
+#define TURN_HEIGHT		30
+#define TURN_LEFT_X 	10
+#define TURN_LEFT_Y		55
+#define TURN_RIGHT_X 	280
+#define TURN_RIGHT_Y	60
+
+// lights
+#define LIGHTS_X		140
+#define LIGHTS_Y		55
+#define LIGHTS_WIDTH	40
+#define LIGHTS_HEIGHT	30
 
 
 // display data cache
@@ -265,8 +285,15 @@ int g_lastSeconds = 0;
 char g_lastDmsVal = 0;
 char g_lastIgnitionVal = 0;
 char g_lastBrakeVal = 0;
+char g_lastTurnLeft = 0;
+char g_lastTurnRight = 0;
+char g_lastLights = 0;
+
+char g_flash = 0;
+char g_lastFlash = 0;
 
 void handle_reset_gesture() {
+
 	char thisGesture = ignition.read();
 	int thisGestureTime = timerDisplay.read_ms();
 	if (g_lastGestureTime + DEBOUNCE_TIME < thisGestureTime && g_lastGesture != thisGesture) {
@@ -318,7 +345,7 @@ void display_task() {
 
 		// Update voltage
 		if (g_lastBmsVoltage != g_currentBmsVoltage) {
-			uint8_t voltageDecimal = (uint8_t)(g_currentBmsVoltage * 10) % 10;
+			uint8_t voltageDecimal = (uint16_t)(g_currentBmsVoltage * 10) % 10;
 			TFT.locate(BATTERY_TEXT_X, VOLTAGE_TEXT_Y);
 			TFT.printf("%02d.%d V", (uint8_t)g_currentBmsVoltage, voltageDecimal);
 			g_lastBmsVoltage = g_currentBmsVoltage;
@@ -328,7 +355,7 @@ void display_task() {
 
 		// Update SOC
 		if (g_lastBmsSoc != g_currentBmsSoc) {
-			uint8_t socDecimal = (uint8_t)(g_currentBmsSoc * 10) % 10;
+			uint8_t socDecimal = (uint16_t)(g_currentBmsSoc * 10) % 10;
 			TFT.locate(BATTERY_TEXT_X, SOC_TEXT_Y);
 			TFT.printf("%02d.%d %", (uint8_t)g_currentBmsSoc, socDecimal);
 			// redraw rectangle
@@ -375,6 +402,76 @@ void display_task() {
 			}
 
 			g_lastTime = currentTime;
+		}
+
+		// Update Turn signals
+
+		if(g_flash && timerFlash.read_ms() % 1000 >= 500) {
+			g_flash = 0;
+		}
+		
+		if(!g_flash && timerFlash.read_ms() % 1000 < 500 && timerFlash.read_ms() != 0) {
+			g_flash = 1;
+		}
+
+		if(g_turnLeft != g_lastTurnLeft) {
+			if(g_turnLeft) {
+				printf("LEFT TURN PRESSED\n");
+				timerFlash.start();
+				if(!g_flash) {
+					g_flash = 1;
+				}
+			} else {
+				if(!g_turnRight) {
+					g_flash = 0;
+					timerFlash.stop();
+					timerFlash.reset();
+				}
+			}
+			g_lastTurnLeft = g_turnLeft;
+		}
+
+		if(g_turnRight != g_lastTurnRight) {
+			if(g_turnRight) {
+				timerFlash.start();
+				if(!g_flash) {
+					g_flash = 1;
+				}
+			} else {
+				if(!g_turnLeft) {
+					g_flash = 0;
+					timerFlash.stop();
+					timerFlash.reset();
+				}
+			}
+			g_lastTurnRight = g_turnRight;
+		}
+
+		if(g_flash != g_lastFlash) {
+			if(g_flash) {
+				printf("FLASH STARTING\n");
+				if(g_turnRight) {
+					TFT.Bitmap(TURN_RIGHT_X, TURN_RIGHT_Y, TURN_WIDTH, TURN_HEIGHT, graphicRightArrow);
+				}
+				if(g_turnLeft) {
+					printf("FLASH STARTING - LEFT\n");
+					TFT.Bitmap(TURN_LEFT_X, TURN_LEFT_Y, TURN_WIDTH, TURN_HEIGHT, graphicLeftArrow);
+				}
+			} else {
+				TFT.fillrect(TURN_RIGHT_X, TURN_RIGHT_Y, TURN_RIGHT_X + TURN_WIDTH, TURN_RIGHT_Y + TURN_HEIGHT, Black);
+				TFT.fillrect(TURN_LEFT_X, TURN_LEFT_Y, TURN_LEFT_X + TURN_WIDTH, TURN_LEFT_Y + TURN_HEIGHT, Black);
+			}
+			g_lastFlash = g_flash;
+		}
+
+		// Update Lights
+		if(g_lights != g_lastLights) {
+			if (g_lights) {
+				TFT.Bitmap(LIGHTS_X, LIGHTS_Y, LIGHTS_WIDTH, LIGHTS_HEIGHT, graphicLights);
+			} else {
+				TFT.fillrect(LIGHTS_X, LIGHTS_Y, LIGHTS_X + LIGHTS_WIDTH, LIGHTS_Y + LIGHTS_HEIGHT, Black);
+			}
+			g_lastLights = g_lights;
 		}
 
 		// Set font size for large test display
