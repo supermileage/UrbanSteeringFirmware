@@ -345,7 +345,7 @@ void display_task() {
 
 		// Update voltage
 		if (g_lastBmsVoltage != g_currentBmsVoltage) {
-			uint8_t voltageDecimal = (uint8_t)(g_currentBmsVoltage * 10) % 10;
+			uint8_t voltageDecimal = (uint16_t)(g_currentBmsVoltage * 10) % 10;
 			TFT.locate(BATTERY_TEXT_X, VOLTAGE_TEXT_Y);
 			TFT.printf("%02d.%d V", (uint8_t)g_currentBmsVoltage, voltageDecimal);
 			g_lastBmsVoltage = g_currentBmsVoltage;
@@ -355,7 +355,7 @@ void display_task() {
 
 		// Update SOC
 		if (g_lastBmsSoc != g_currentBmsSoc) {
-			uint8_t socDecimal = (uint8_t)(g_currentBmsSoc * 10) % 10;
+			uint8_t socDecimal = (uint16_t)(g_currentBmsSoc * 10) % 10;
 			TFT.locate(BATTERY_TEXT_X, SOC_TEXT_Y);
 			TFT.printf("%02d.%d %", (uint8_t)g_currentBmsSoc, socDecimal);
 			// redraw rectangle
