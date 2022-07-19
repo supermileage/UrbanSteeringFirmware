@@ -57,7 +57,6 @@ Timer timerAccessories;
 Timer timerFlash;
 
 // globals variables shared between main and display threads
-
 unsigned g_currentSpeed = 0;
 float g_currentBmsSoc = 0.0f;
 float g_currentBmsVoltage = 0.0f;
