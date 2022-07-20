@@ -5,8 +5,9 @@
 
 class Rectangle : public Shape {
 	public:
-		Rectangle(SPI_TFT_ILI9341* tft, int32_t xpos, int32_t ypos, int32_t colour, int32_t width, int32_t height, bool fill);
+		Rectangle() { }
 		~Rectangle() { }
+		void init(SPI_TFT_ILI9341* tft, int32_t xpos, int32_t ypos, int32_t colour, int32_t width, int32_t height, bool fill) override;
 		void draw() override;
 
 	private:

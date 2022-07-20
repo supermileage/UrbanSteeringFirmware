@@ -5,8 +5,9 @@
 
 class Circle : public Shape {
 	public:
-		Circle(SPI_TFT_ILI9341* tft, int32_t xpos, int32_t ypos, int32_t colour, int32_t radius, bool _fill);
+		Circle() { }
 		~Circle() { }
+		void init(SPI_TFT_ILI9341* tft, int32_t xpos, int32_t ypos, int32_t colour, int32_t radius, bool _fill) override;
 		void draw() override;
 		
 	private:

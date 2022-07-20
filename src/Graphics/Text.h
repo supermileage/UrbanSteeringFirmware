@@ -7,8 +7,9 @@
 
 class Text : public Shape {
 	public:
-		Text(SPI_TFT_ILI9341* tft, int32_t xpos, int32_t ypos, int32_t colour, unsigned char* font);
+		Text() { }
 		~Text() { }
+		void init(SPI_TFT_ILI9341* tft, int32_t xpos, int32_t ypos, int32_t colour, unsigned char* font) override;
 		void draw() override;
 		void setDisplayString(std::string value);
 
