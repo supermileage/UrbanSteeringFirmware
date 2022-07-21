@@ -7,7 +7,7 @@ class Shape {
 	public:
 		Shape() { }
 		virtual ~Shape() { }
-		virtual void init(SPI_TFT_ILI9341* tft, int32_t xpos, int32_t ypos, int32_t colour);
+		void init(SPI_TFT_ILI9341* tft, int32_t xpos, int32_t ypos, int32_t colour);
 		void setColour(int32_t value);
 		int32_t getColour();
 		virtual void draw() = 0;

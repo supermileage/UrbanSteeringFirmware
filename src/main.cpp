@@ -2,17 +2,18 @@
 #include <cmath>
 
 #include "stdio.h"
-#include "mbed.h"
 #include "rtos.h"
 
 #include "can_common.h"
 #include "SPI_TFT_ILI9341.h"
 
-#include "display-settings.h"
 #include "Arial12x12.h"
 #include "Arial28x28.h"
 #include "font_big.h"
 #include "graphics.h"
+
+#include "SharedProperty.h"
+#include "SteeringDisplay.h"
 
 #include "main.h"
 
@@ -58,7 +59,8 @@ Timer timerDisplay;
 Timer timerAccessories;
 Timer timerFlash;
 
-// globals variables shared between main and display threads
+// TODO: Replace globals with shared properties
+// global variables shared between main and display threads
 unsigned g_currentSpeed = 0;
 float g_currentBmsSoc = 0.0f;
 float g_currentBmsVoltage = 0.0f;
@@ -73,29 +75,57 @@ char g_turnLeft = 0;
 char g_turnRight = 0;
 char g_lights = 0;
 
+// Properties to bind to UI elements
+SharedProperty<data_t> dmsVal(0);
+SharedProperty<data_t> ignitionVal(0);
+SharedProperty<data_t> brakeVal(0);
+SharedProperty<batt_t> batterySoc(0);
+SharedProperty<batt_t> batteryVoltage(0);
+SharedProperty<speed_t> currentSpeed(0);
+SharedProperty<throttle_t> currentThrottle(0);
+SharedProperty<data_t> turnLeft(0);
+SharedProperty<data_t> turnRight(0);
+SharedProperty<data_t> lightsVal(0);
+
+SharedProperty<data_t> prevAccVal(0);
+SharedProperty<data_t> lastGesture(0);
+
+void initializeDisplay() {
+	display.init();
+	display.addDynamicGraphicBinding(dmsVal, SteeringDisplay::Dms);
+	display.addDynamicGraphicBinding(ignitionVal, SteeringDisplay::Ignition);
+	display.addDynamicGraphicBinding(brakeVal, SteeringDisplay::Brake);
+	display.addDynamicGraphicBinding(batterySoc, SteeringDisplay::Soc);
+	display.addDynamicGraphicBinding(batteryVoltage, SteeringDisplay::Voltage);
+	display.addDynamicGraphicBinding(currentSpeed, SteeringDisplay::Speed);
+	display.addDynamicGraphicBinding(currentThrottle, SteeringDisplay::Power);
+}
+
+SteeringDisplay display(&TFT);
+
 int main() {
-    timerMotor.start();
-    timerDisplay.start();
-    timerAccessories.start();
+	timerMotor.start();
+	timerDisplay.start();
+	timerAccessories.start();
 
 	// Initalize Accessories--it's impossible for left and right blinker to be on simultaneously so this will cause can update to be sent on boot
-    g_prevAccVal = 0xFF;
+	g_prevAccVal = 0xFF;
 
-	initialize_display();
+	initializeDisplay();
 	Thread display_thread;
 	display_thread.start(display_task);
 
 	dmsLed.write(1);
 
-    while (1) {
+	while (1) {
 		handle_reset_gesture();
 
 		handle_accessories();
 
-        handle_motor_inputs();
-
+		handle_motor_inputs();
+		
 		receive_can();
-    }
+	}
 }
 
 void handle_accessories() {
@@ -198,6 +228,82 @@ void receive_can() {
 	}
 }
 
+// TODO: Remove display macros from main (Same macros are contained within SteeringDisplay class)
+/* Display Macros */
+
+// fonts 
+#define SMALL_FONT 	Arial12x12
+#define LARGE_FONT 	Arial28x28
+#define COOL_FONT 	Neu42x35
+
+// accessories
+#define DMS_X 						10
+#define IGNITION_X 					60
+#define BRAKE_X						100
+#define STATUS_Y 					5
+#define CIRCLE_RADIUS 				10
+#define CIRCLE_Y_OFFSET 			CIRCLE_RADIUS * 3
+#define CIRCLE_X_OFFSET_DMS  		14
+#define CIRCLE_X_OFFSET_IGNITION  	10
+#define CIRCLE_X_OFFSET_BRAKE  		14
+
+// voltage
+#define BATTERY_TEXT_X 		260
+#define VOLTAGE_TEXT_Y 		STATUS_Y + 26
+#define SOC_TEXT_Y			STATUS_Y + 6
+#define BATTERY_LEFT_X 		150
+#define BATTERY_LEFT_Y 		11
+#define BATTERY_WIDTH 		100
+#define BATTERY_HEIGHT 		30
+#define BATTERY_RIGHT_X 	BATTERY_LEFT_X + BATTERY_WIDTH
+#define BATTERY_RIGHT_Y 	BATTERY_LEFT_Y + BATTERY_HEIGHT
+#define BATTERY_PADDING 	3
+
+#define BATTERY_BTN_X 		250
+#define BATTERY_BTN_Y 		20
+#define BATTERY_BTN_WIDTH 	2
+#define BATTERY_BTN_HEIGHT 	10
+
+// speed
+#define SPEED_X_LABEL 50
+#define SPEED_Y_LABEL 103
+#define SPEED_X 80
+#define SPEED_X_UNIT_OFFSET 110
+#define SPEED_Y 85
+
+// power
+#define POWER_X_LABEL 48
+#define POWER_Y_LABEL 153
+#define POWER_X 80
+#define POWER_X_UNIT_OFFSET	110
+#define POWER_Y 135
+
+// time
+#define TIME_X_LABEL 	46
+#define TIME_Y_LABEL 	203
+#define MINUTES_X 		80
+#define COLON_X			160
+#define SECONDS_X 		185
+#define TIME_Y 			185
+
+// throttle debug
+#define THROTTLE_RAW_X 10
+#define THROTTLE_RAW_Y 210
+
+// turn signals
+#define TURN_WIDTH		30
+#define TURN_HEIGHT		30
+#define TURN_LEFT_X 	10
+#define TURN_LEFT_Y		55
+#define TURN_RIGHT_X 	280
+#define TURN_RIGHT_Y	60
+
+// lights
+#define LIGHTS_X		140
+#define LIGHTS_Y		55
+#define LIGHTS_WIDTH	40
+#define LIGHTS_HEIGHT	30
+
 // display data cache
 int g_lastTime = 0;
 unsigned g_lastSpeed = 0;
@@ -217,7 +323,7 @@ char g_flash = 0;
 char g_lastFlash = 0;
 
 void handle_reset_gesture() {
-
+	
 	char thisGesture = ignition.read();
 	int thisGestureTime = timerDisplay.read_ms();
 	if (g_lastGestureTime + DEBOUNCE_TIME < thisGestureTime && g_lastGesture != thisGesture) {
@@ -408,72 +514,4 @@ void display_task() {
 
 		#endif
 	}
-}
-
-void initialize_display(){
-	TFT.set_orientation(3);
-	TFT.background(Black);
-	TFT.cls();
-	
-	// Initialize Display Values
-	TFT.set_font((unsigned char*) SMALL_FONT);
-	// dms
-	TFT.locate(DMS_X, STATUS_Y);
-	TFT.printf("DMS");
-    TFT.fillcircle(DMS_X + CIRCLE_X_OFFSET_DMS, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Red);
-	// ignition
-	TFT.locate(IGNITION_X, STATUS_Y);
-	TFT.printf("IGN");
-	TFT.fillcircle(IGNITION_X + CIRCLE_X_OFFSET_IGNITION, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Red);
-	// brake
-	TFT.locate(BRAKE_X, STATUS_Y);
-	TFT.printf("BRK");
-	TFT.fillcircle(BRAKE_X + CIRCLE_X_OFFSET_BRAKE, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Green);
-	// voltage
-	TFT.locate(BATTERY_TEXT_X, SOC_TEXT_Y);
-	TFT.printf("00.0 %");
-	TFT.locate(BATTERY_TEXT_X, VOLTAGE_TEXT_Y);
-	TFT.printf("00.0 V");
-	TFT.rect(BATTERY_LEFT_X, BATTERY_LEFT_Y, BATTERY_LEFT_X + BATTERY_WIDTH, BATTERY_LEFT_Y + BATTERY_HEIGHT, White);
-	TFT.fillrect(BATTERY_LEFT_X + BATTERY_PADDING, BATTERY_LEFT_Y + BATTERY_PADDING, BATTERY_RIGHT_X - BATTERY_PADDING, BATTERY_RIGHT_Y - BATTERY_PADDING, Green);
-	TFT.rect(BATTERY_BTN_X, BATTERY_BTN_Y, BATTERY_BTN_X + BATTERY_BTN_WIDTH, BATTERY_BTN_Y + BATTERY_BTN_HEIGHT, White);
-
-	// Labels
-	TFT.locate(SPEED_X_LABEL, SPEED_Y_LABEL);
-	TFT.printf("SPD");
-	TFT.locate(POWER_X_LABEL, POWER_Y_LABEL);
-	TFT.printf("PWR");
-	TFT.locate(TIME_X_LABEL, TIME_Y_LABEL);
-	TFT.printf("TIME");
-
-	TFT.set_font((unsigned char*) COOL_FONT);
-
-	// speed
-	TFT.locate(SPEED_X, SPEED_Y);
-	TFT.printf("00");
-	TFT.locate(SPEED_X + SPEED_X_UNIT_OFFSET, SPEED_Y);
-	TFT.printf("K/H");
-
-	// power
-	TFT.locate(POWER_X, POWER_Y);
-	TFT.printf("000");
-	TFT.locate(POWER_X + POWER_X_UNIT_OFFSET, POWER_Y);
-	TFT.printf("%");
-
-	// time
-	TFT.locate(MINUTES_X, TIME_Y);
-	TFT.printf("00");
-	TFT.locate(COLON_X, TIME_Y);
-	TFT.printf(":");
-	TFT.locate(SECONDS_X, TIME_Y);
-	TFT.printf("00");
-
-	// Large font values
-	TFT.set_font((unsigned char*) LARGE_FONT);
-
-	#if DEBUG_THROTTLE
-		TFT.locate(THROTTLE_RAW_X, THROTTLE_RAW_Y);
-		TFT.printf("0000");
-	#endif
-
 }

@@ -54,7 +54,7 @@ void receive_can();
  * @brief Initializes LCD display
  * 
  */
-void initialize_display();
+void initializeDisplay();
 
 /**
  * @brief checks for and handles time reset gesture

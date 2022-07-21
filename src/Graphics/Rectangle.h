@@ -7,12 +7,12 @@ class Rectangle : public Shape {
 	public:
 		Rectangle() { }
 		~Rectangle() { }
-		void init(SPI_TFT_ILI9341* tft, int32_t xpos, int32_t ypos, int32_t colour, int32_t width, int32_t height, bool fill) override;
+		void init(SPI_TFT_ILI9341* tft, int32_t xpos, int32_t ypos, int32_t colour, int32_t xpos2, int32_t ypos2, bool fill);
 		void draw() override;
 
 	private:
-		int32_t _width;
-		int32_t _height;
+		int32_t _x2;
+		int32_t _y2;
 		bool _fill;
 };
 
