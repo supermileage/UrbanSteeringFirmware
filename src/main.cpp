@@ -59,23 +59,12 @@ Timer timerDisplay;
 Timer timerAccessories;
 Timer timerFlash;
 
-// TODO: Replace globals with shared properties
 // global variables shared between main and display threads
-unsigned g_currentSpeed = 0;
-float g_currentBmsSoc = 0.0f;
-float g_currentBmsVoltage = 0.0f;
-uint8_t g_currentThrottle = 0;
 int g_lastGestureTime = 0;
-char g_prevAccVal = 0;
-char g_ignitionVal = 0;
-char g_dmsVal = 0;
-char g_brakeVal = 0;
+int g_lastTime = 0;
 char g_lastGesture = 0;
-char g_turnLeft = 0;
-char g_turnRight = 0;
-char g_lights = 0;
 
-// Properties to bind to UI elements
+// Properties to bind to steering GUI and CAN events
 SharedProperty<data_t> dmsVal(0);
 SharedProperty<data_t> ignitionVal(0);
 SharedProperty<data_t> brakeVal(0);
@@ -83,10 +72,9 @@ SharedProperty<batt_t> batterySoc(0);
 SharedProperty<batt_t> batteryVoltage(0);
 SharedProperty<speed_t> currentSpeed(0);
 SharedProperty<throttle_t> currentThrottle(0);
+SharedProperty<data_t> lightsVal(0);
 SharedProperty<data_t> turnLeft(0);
 SharedProperty<data_t> turnRight(0);
-SharedProperty<data_t> lightsVal(0);
-
 SharedProperty<data_t> prevAccVal(0);
 SharedProperty<data_t> lastGesture(0);
 
@@ -99,6 +87,9 @@ void initializeDisplay() {
 	display.addDynamicGraphicBinding(batteryVoltage, SteeringDisplay::Voltage);
 	display.addDynamicGraphicBinding(currentSpeed, SteeringDisplay::Speed);
 	display.addDynamicGraphicBinding(currentThrottle, SteeringDisplay::Power);
+	display.addDynamicGraphicBinding(lightsVal, SteeringDisplay::Lights);
+	display.addDynamicGraphicBinding(turnLeft, SteeringDisplay::LeftSignal);
+	display.addDynamicGraphicBinding(turnRight, SteeringDisplay::RightSignal);
 }
 
 SteeringDisplay display(&TFT);
@@ -109,7 +100,7 @@ int main() {
 	timerAccessories.start();
 
 	// Initalize Accessories--it's impossible for left and right blinker to be on simultaneously so this will cause can update to be sent on boot
-	g_prevAccVal = 0xFF;
+	prevAccVal = 0xFF;
 
 	initializeDisplay();
 	Thread display_thread;
@@ -132,7 +123,7 @@ void handle_accessories() {
 	if (timerAccessories.read_ms() > ACCESSORIES_TRANSMIT_INTERVAL) {
 		char hazardsOn;
 		char currentAccVal = read_accessory_inputs(hazardsOn);
-		if ((currentAccVal != g_prevAccVal)) {
+		if ((prevAccVal.getValue() != currentAccVal)) {
 			// turn hazards off
 			if (hazardsOn) {
 				const unsigned char data[] = { 0x2, 0x4 << 1, 0x5 << 1 };
@@ -141,50 +132,50 @@ void handle_accessories() {
 			}
 			const char data[] = {0, currentAccVal};
 			can.write(CANMessage(CAN_ACC_OPERATION, data, 2));
-			g_prevAccVal = currentAccVal;
+			prevAccVal = currentAccVal;
 		}
 		timerAccessories.reset();
 	}
 }
 
 char read_accessory_inputs(char& hazardsVal){
-    g_lights = (char)(lights.read());
+    lightsVal = (char)(lights.read());
 	char brakeVal = (char)(!brake.read());
     char hornVal = (char)(horn.read());
     hazardsVal = (char)(hazards.read());
-    g_turnRight = (char)(rightBlinker.read());
-    g_turnLeft = (char)(leftBlinker.read());
+    turnLeft = (char)(leftBlinker.read());
+    turnRight = (char)(rightBlinker.read());
     char wiperVal = (char)(wipers.read());
 
 	// hazards on == both blinkers turned on at the same time
     if (hazardsVal) {
-		g_turnLeft = 1;
-        g_turnRight = 1;
+		turnLeft = 1;
+        turnRight = 1;
     }
 
-    char dataStr = (wiperVal << 6) | (g_turnLeft << 5) | (g_turnRight << 4) | (hazardsVal << 3) | (hornVal << 2) | (brakeVal << 1) | g_lights;
+    char dataStr = (wiperVal << 6) | (turnLeft << 5) | (turnRight << 4) | (hazardsVal << 3) | (hornVal << 2) | (brakeVal << 1) | lightsVal.getValue();
     return dataStr;
 }
 
 void handle_motor_inputs(){
 	if (timerMotor.read_ms() > MOTOR_CONTROLLER_TRANSMIT_INTERVAL) {
 
-		g_dmsVal = get_dms_val();
-		g_ignitionVal = (char)ignition.read();
-		g_brakeVal = (char)!brake.read();
+		dmsVal = getDmsVal();
+		ignitionVal = (char)ignition.read();
+		brakeVal = (char)!brake.read();
 
-		g_currentThrottle = get_throttle_val();
+		currentThrottle = get_throttle_val();
 		
-		if (!g_dmsVal || !g_ignitionVal || g_brakeVal) {
-			g_currentThrottle = 0;
+		if (!dmsVal.getValue() || !ignitionVal.getValue() || brakeVal.getValue()) {
+			currentThrottle = 0;
 		}
 
 		// Throttle Data
-		const unsigned char throttleData[] = { g_currentThrottle };
+		const unsigned char throttleData[] = { currentThrottle.getValue() };
 		can.write(CANMessage(CAN_STEERING_THROTTLE, throttleData, 1));
 
 		// Ready Data
-		char readyVal = (g_brakeVal << 2) | (g_dmsVal << 1) | g_ignitionVal;
+		char readyVal = (brakeVal.getValue() << 2) | (dmsVal.getValue() << 1) | ignitionVal.getValue();
 		const char readyData[] = { readyVal };
 		can.write(CANMessage(CAN_STEERING_READY, readyData, 1));
 
@@ -204,14 +195,14 @@ unsigned char get_throttle_val() {
 	return (unsigned char)(throttleAsFloat * SLOPE + OFFSET);
 }
 
-char get_dms_val() {
+data_t getDmsVal() {
 	float dms_ctrl = dms.read();
 	dmsLed.write(0);
 	wait_us(40);
     float dms_val = dms.read();
 	dmsLed.write(1);
 
-    return dms_val <= DMS_THRESH && (dms_val < dms_ctrl - DMS_DELTA);
+    return (data_t)(dms_val <= DMS_THRESH && (dms_val < dms_ctrl - DMS_DELTA));
 }
 
 // Checks for gps speed / bms data updates from telemetry
@@ -220,107 +211,16 @@ void receive_can() {
 
 	if (can.read(msg)) {
 		if (msg.id == CAN_TELEMETRY_GPS_DATA) {
-			g_currentSpeed = (unsigned)msg.data[0];
+			currentSpeed = (unsigned)msg.data[0];
 		} else if (msg.id == CAN_TELEMETRY_BMS_DATA) {
-			memcpy((void*)&g_currentBmsSoc, (void*)msg.data, 4);
-			memcpy((void*)&g_currentBmsVoltage, (void*)(msg.data + 4), 4);
+			float soc, voltage;
+			memcpy((void*)&soc, (void*)msg.data, 4);
+			memcpy((void*)&voltage, (void*)(msg.data + 4), 4);
+			batterySoc = soc;
+			batteryVoltage = voltage;
 		}
 	}
 }
-
-// TODO: Remove display macros from main (Same macros are contained within SteeringDisplay class)
-/* Display Macros */
-
-// fonts 
-#define SMALL_FONT 	Arial12x12
-#define LARGE_FONT 	Arial28x28
-#define COOL_FONT 	Neu42x35
-
-// accessories
-#define DMS_X 						10
-#define IGNITION_X 					60
-#define BRAKE_X						100
-#define STATUS_Y 					5
-#define CIRCLE_RADIUS 				10
-#define CIRCLE_Y_OFFSET 			CIRCLE_RADIUS * 3
-#define CIRCLE_X_OFFSET_DMS  		14
-#define CIRCLE_X_OFFSET_IGNITION  	10
-#define CIRCLE_X_OFFSET_BRAKE  		14
-
-// voltage
-#define BATTERY_TEXT_X 		260
-#define VOLTAGE_TEXT_Y 		STATUS_Y + 26
-#define SOC_TEXT_Y			STATUS_Y + 6
-#define BATTERY_LEFT_X 		150
-#define BATTERY_LEFT_Y 		11
-#define BATTERY_WIDTH 		100
-#define BATTERY_HEIGHT 		30
-#define BATTERY_RIGHT_X 	BATTERY_LEFT_X + BATTERY_WIDTH
-#define BATTERY_RIGHT_Y 	BATTERY_LEFT_Y + BATTERY_HEIGHT
-#define BATTERY_PADDING 	3
-
-#define BATTERY_BTN_X 		250
-#define BATTERY_BTN_Y 		20
-#define BATTERY_BTN_WIDTH 	2
-#define BATTERY_BTN_HEIGHT 	10
-
-// speed
-#define SPEED_X_LABEL 50
-#define SPEED_Y_LABEL 103
-#define SPEED_X 80
-#define SPEED_X_UNIT_OFFSET 110
-#define SPEED_Y 85
-
-// power
-#define POWER_X_LABEL 48
-#define POWER_Y_LABEL 153
-#define POWER_X 80
-#define POWER_X_UNIT_OFFSET	110
-#define POWER_Y 135
-
-// time
-#define TIME_X_LABEL 	46
-#define TIME_Y_LABEL 	203
-#define MINUTES_X 		80
-#define COLON_X			160
-#define SECONDS_X 		185
-#define TIME_Y 			185
-
-// throttle debug
-#define THROTTLE_RAW_X 10
-#define THROTTLE_RAW_Y 210
-
-// turn signals
-#define TURN_WIDTH		30
-#define TURN_HEIGHT		30
-#define TURN_LEFT_X 	10
-#define TURN_LEFT_Y		55
-#define TURN_RIGHT_X 	280
-#define TURN_RIGHT_Y	60
-
-// lights
-#define LIGHTS_X		140
-#define LIGHTS_Y		55
-#define LIGHTS_WIDTH	40
-#define LIGHTS_HEIGHT	30
-
-// display data cache
-int g_lastTime = 0;
-unsigned g_lastSpeed = 0;
-uint8_t g_lastThrottle = 0;
-float g_lastBmsSoc = 0;
-float g_lastBmsVoltage = 0;
-int g_lastMinutes = 0;
-int g_lastSeconds = 0;
-char g_lastDmsVal = 0;
-char g_lastIgnitionVal = 0;
-char g_lastBrakeVal = 0;
-char g_lastTurnLeft = 0;
-char g_lastTurnRight = 0;
-char g_lastLights = 0;
-
-char g_flash = 0;
-char g_lastFlash = 0;
 
 void handle_reset_gesture() {
 	
@@ -337,181 +237,4 @@ void handle_reset_gesture() {
 		}
 	}
 	g_lastGesture = thisGesture;
-}
-
-void display_task() {
-	while (true) {
-		TFT.set_font((unsigned char*) SMALL_FONT);
-
-		// Update DMS
-		if (g_lastDmsVal != g_dmsVal) {
-			if (g_dmsVal) {
-    			TFT.fillcircle(DMS_X + CIRCLE_X_OFFSET_DMS, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Green);
-			} else {
-    			TFT.fillcircle(DMS_X + CIRCLE_X_OFFSET_DMS, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Red);
-			}
-			g_lastDmsVal = g_dmsVal;
-		}
-
-		// Update Ignition
-		if (g_lastIgnitionVal != g_ignitionVal) {
-			if (g_ignitionVal) {
-				TFT.fillcircle(IGNITION_X + CIRCLE_X_OFFSET_IGNITION, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Green);
-			} else {
-				TFT.fillcircle(IGNITION_X + CIRCLE_X_OFFSET_IGNITION, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Red);
-			}
-			g_lastIgnitionVal = g_ignitionVal;
-		}
-
-		// Update Brake
-		if (g_lastBrakeVal != g_brakeVal) {
-			if (!g_brakeVal) {
-				TFT.fillcircle(BRAKE_X + CIRCLE_X_OFFSET_BRAKE, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Green);
-			} else {
-				TFT.fillcircle(BRAKE_X + CIRCLE_X_OFFSET_BRAKE, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Red);
-			}
-			g_lastBrakeVal = g_brakeVal;
-		}
-
-		// Update voltage
-		if (g_lastBmsVoltage != g_currentBmsVoltage) {
-			uint8_t voltageDecimal = (uint16_t)(g_currentBmsVoltage * 10) % 10;
-			TFT.locate(BATTERY_TEXT_X, VOLTAGE_TEXT_Y);
-			TFT.printf("%02d.%d V", (uint8_t)g_currentBmsVoltage, voltageDecimal);
-			g_lastBmsVoltage = g_currentBmsVoltage;
-
-			
-		}
-
-		// Update SOC
-		if (g_lastBmsSoc != g_currentBmsSoc) {
-			uint8_t socDecimal = (uint16_t)(g_currentBmsSoc * 10) % 10;
-			TFT.locate(BATTERY_TEXT_X, SOC_TEXT_Y);
-			TFT.printf("%02d.%d %", (uint8_t)g_currentBmsSoc, socDecimal);
-			// redraw rectangle
-			int rectangleWidth = (int)(g_currentBmsSoc / 100.0f * (float)BATTERY_WIDTH);
-			TFT.fillrect(BATTERY_LEFT_X + BATTERY_PADDING, BATTERY_LEFT_Y + BATTERY_PADDING, BATTERY_LEFT_X - BATTERY_PADDING + rectangleWidth , BATTERY_RIGHT_Y - BATTERY_PADDING, Green);
-			TFT.fillrect(BATTERY_LEFT_X + BATTERY_PADDING + rectangleWidth, BATTERY_LEFT_Y + BATTERY_PADDING, BATTERY_RIGHT_X - BATTERY_PADDING, BATTERY_RIGHT_Y - BATTERY_PADDING, Black);
-			g_lastBmsSoc = g_currentBmsSoc;
-		}
-
-		// Set font size for large test display
-		TFT.set_font((unsigned char*) COOL_FONT);
-
-		// Update Speed
-		if (g_lastSpeed != g_currentSpeed) {
-			g_lastSpeed = g_currentSpeed;
-			TFT.locate(SPEED_X, SPEED_Y);
-			TFT.printf("%02u", g_currentSpeed);
-		}
-
-		// Update Power
-		if(g_lastThrottle != g_currentThrottle) {
-			g_lastThrottle = g_currentThrottle;
-			TFT.locate(POWER_X, POWER_Y);
-			TFT.printf("%03u", (g_currentThrottle * 100) / 255);
-			
-		}
-
-		// Update Time
-		int currentTime = timerDisplay.read_ms() / 1000;
-		if (currentTime != g_lastTime) {
-			int minutes = currentTime / 60;
-			int seconds = currentTime % 60;
-
-			if(minutes != g_lastMinutes){
-				TFT.locate(MINUTES_X, TIME_Y);
-				TFT.printf("%02u", minutes);
-				g_lastMinutes = minutes;
-			}
-
-			if(seconds != g_lastSeconds){
-				TFT.locate(SECONDS_X, TIME_Y);
-				TFT.printf("%02u", seconds);
-				g_lastSeconds = seconds;
-			}
-
-			g_lastTime = currentTime;
-		}
-
-		// Update Turn signals
-
-		if(g_flash && timerFlash.read_ms() % 1000 >= 500) {
-			g_flash = 0;
-		}
-		
-		if(!g_flash && timerFlash.read_ms() % 1000 < 500 && timerFlash.read_ms() != 0) {
-			g_flash = 1;
-		}
-
-		if(g_turnLeft != g_lastTurnLeft) {
-			if(g_turnLeft) {
-				printf("LEFT TURN PRESSED\n");
-				timerFlash.start();
-				if(!g_flash) {
-					g_flash = 1;
-				}
-			} else {
-				if(!g_turnRight) {
-					g_flash = 0;
-					timerFlash.stop();
-					timerFlash.reset();
-				}
-			}
-			g_lastTurnLeft = g_turnLeft;
-		}
-
-		if(g_turnRight != g_lastTurnRight) {
-			if(g_turnRight) {
-				timerFlash.start();
-				if(!g_flash) {
-					g_flash = 1;
-				}
-			} else {
-				if(!g_turnLeft) {
-					g_flash = 0;
-					timerFlash.stop();
-					timerFlash.reset();
-				}
-			}
-			g_lastTurnRight = g_turnRight;
-		}
-
-		if(g_flash != g_lastFlash) {
-			if(g_flash) {
-				printf("FLASH STARTING\n");
-				if(g_turnRight) {
-					TFT.Bitmap(TURN_RIGHT_X, TURN_RIGHT_Y, TURN_WIDTH, TURN_HEIGHT, graphicRightArrow);
-				}
-				if(g_turnLeft) {
-					printf("FLASH STARTING - LEFT\n");
-					TFT.Bitmap(TURN_LEFT_X, TURN_LEFT_Y, TURN_WIDTH, TURN_HEIGHT, graphicLeftArrow);
-				}
-			} else {
-				TFT.fillrect(TURN_RIGHT_X, TURN_RIGHT_Y, TURN_RIGHT_X + TURN_WIDTH, TURN_RIGHT_Y + TURN_HEIGHT, Black);
-				TFT.fillrect(TURN_LEFT_X, TURN_LEFT_Y, TURN_LEFT_X + TURN_WIDTH, TURN_LEFT_Y + TURN_HEIGHT, Black);
-			}
-			g_lastFlash = g_flash;
-		}
-
-		// Update Lights
-		if(g_lights != g_lastLights) {
-			if (g_lights) {
-				TFT.Bitmap(LIGHTS_X, LIGHTS_Y, LIGHTS_WIDTH, LIGHTS_HEIGHT, graphicLights);
-			} else {
-				TFT.fillrect(LIGHTS_X, LIGHTS_Y, LIGHTS_X + LIGHTS_WIDTH, LIGHTS_Y + LIGHTS_HEIGHT, Black);
-			}
-			g_lastLights = g_lights;
-		}
-
-		// Set font size for large test display
-		TFT.set_font((unsigned char*) LARGE_FONT);
-
-		#if DEBUG_THROTTLE
-
-			TFT.locate(THROTTLE_RAW_X, THROTTLE_RAW_Y);
-			TFT.printf("%4u", (unsigned int)(throttle.read() * 10000));
-
-		#endif
-	}
 }

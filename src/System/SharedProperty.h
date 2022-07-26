@@ -41,6 +41,14 @@ class SharedProperty {
 			return os;
 		}
 
+		T operator<<(int32_t shift) {
+			return (T)(_value << shift);
+		}
+
+		T operator!(SharedProperty<T> property) {
+			return !property.getValue();
+		}
+
 		void setValue(T value) {
 			_stateMutex.lock();
 			if (value != _value) {

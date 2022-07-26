@@ -29,7 +29,7 @@ void handle_motor_inputs();
  * 
  * @return bool indicating whether dead man's switch is on/off
  */
-char get_dms_val();
+data_t getDmsVal();
 
 /**
  * @brief Gets the value of throttle as unsigned char (0 <= value <= 255)

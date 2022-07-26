@@ -12,3 +12,7 @@ void Circle::draw() {
 	else
 		_tft->circle(_x, _y, _radius, _colour);
 }
+
+void Circle::clear() {
+	_tft->fillcircle(_x, _y, _radius, _background);
+}

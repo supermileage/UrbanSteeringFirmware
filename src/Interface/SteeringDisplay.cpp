@@ -3,12 +3,12 @@
 #include <stdlib.h>
 #include "Arial12x12.h"
 #include "font_big.h"
+#include "AnimationFlashing.h"
 
 /* Display Macros */
 
 // fonts 
 #define SMALL_FONT 	Arial12x12
-
 #define COOL_FONT 	Neu42x35
 
 // accessories
@@ -66,6 +66,7 @@
 #define THROTTLE_RAW_Y 210
 
 // turn signals
+#define TURN_INTERVAL	500
 #define TURN_WIDTH		30
 #define TURN_HEIGHT		30
 #define TURN_LEFT_X 	10
@@ -79,7 +80,9 @@
 #define LIGHTS_WIDTH	40
 #define LIGHTS_HEIGHT	30
 
-SteeringDisplay::SteeringDisplay(SPI_TFT_ILI9341* tft) : _tft(tft) { }
+SteeringDisplay::SteeringDisplay(SPI_TFT_ILI9341* tft) : _tft(tft) {
+	_animationTimer.start();
+}
 
 void SteeringDisplay::init() {
 	// initialize tft display
@@ -94,23 +97,23 @@ void SteeringDisplay::init() {
 	_tft->locate(DMS_X, STATUS_Y);
 	_tft->printf("DMS");
 	_dmsIcon.init(_tft, DMS_X + CIRCLE_X_OFFSET_DMS, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Red, true);
-	_dynamicGraphicsData[(int32_t)SteeringDisplay::Dms] = DynamicGraphicData { &_dmsIcon, true  };
+	_setDynamicGraphic(SteeringDisplay::Dms, &_dmsIcon);
 	// Ignition
 	_tft->locate(IGNITION_X, STATUS_Y);
 	_tft->printf("IGN");
 	_ignitionIcon.init(_tft, IGNITION_X + CIRCLE_X_OFFSET_IGNITION, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Red, true);
-	_dynamicGraphicsData[(int32_t)SteeringDisplay::Ignition] = DynamicGraphicData { &_ignitionIcon, true };
+	_setDynamicGraphic(SteeringDisplay::Ignition, &_ignitionIcon);
 	// Brake
 	_tft->locate(BRAKE_X, STATUS_Y);
 	_tft->printf("BRK");
 	_brakeIcon.init(_tft, BRAKE_X + CIRCLE_X_OFFSET_BRAKE, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Green, true);
-	_dynamicGraphicsData[(int32_t)SteeringDisplay::Brake] = DynamicGraphicData { &_brakeIcon, true };
-	// Battery Icon
+	_setDynamicGraphic(SteeringDisplay::Brake, &_brakeIcon);
+	// Battery icon w/ static outline graphic
 	_tft->rect(BATTERY_LEFT_X, BATTERY_LEFT_Y, BATTERY_LEFT_X + BATTERY_WIDTH, BATTERY_LEFT_Y + BATTERY_HEIGHT, White);
 	_tft->rect(BATTERY_BTN_X, BATTERY_BTN_Y, BATTERY_BTN_X + BATTERY_BTN_WIDTH, BATTERY_BTN_Y + BATTERY_BTN_HEIGHT, White);
-	_batteryIcon.init(_tft, BATTERY_LEFT_X + BATTERY_PADDING, BATTERY_LEFT_Y + BATTERY_PADDING, Green, BATTERY_RIGHT_X - BATTERY_PADDING, BATTERY_RIGHT_Y - BATTERY_PADDING, true);
-	_dynamicGraphicsData[(int32_t)SteeringDisplay::Battery] = DynamicGraphicData { &_batteryIcon, true };
-
+	_batteryIcon.init(_tft, BATTERY_LEFT_X + BATTERY_PADDING, BATTERY_LEFT_Y + BATTERY_PADDING,
+		Green, BATTERY_RIGHT_X - BATTERY_PADDING, BATTERY_RIGHT_Y - BATTERY_PADDING, true);
+	_setDynamicGraphic(SteeringDisplay::Battery, &_batteryIcon);
 	// Battery Soc
 	_initializeDynamicText(&_batterySocText, SteeringDisplay::Soc, BATTERY_TEXT_X, SOC_TEXT_Y, (unsigned char*)SMALL_FONT, "00.0 %");
 	// Battery Voltage
@@ -144,15 +147,20 @@ void SteeringDisplay::init() {
 		TFT.printf("0000");
 	#endif
 
-	_runDynamicGraphics();
+	_runRedrawQueue();
 }
 
 void SteeringDisplay::run() {
-	_runDynamicGraphics();
+	_runRedrawQueue();
+
+	// run time-based animations
+	int32_t currentTime = _animationTimer.read_ms();
+	for (const auto& pair : _animations)
+		pair.second->run(currentTime);
 }
 
-Command* SteeringDisplay::_getCommandForGraphic(SteeringDisplay::DynamicGraphic graphic) {
-	switch (graphic) {
+Command* SteeringDisplay::_getDelegateForGraphic(SteeringDisplay::DynamicGraphicId id) {
+	switch (id) {
 		case SteeringDisplay::Dms:
 			return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onDmsChanged);
 			break;
@@ -177,26 +185,37 @@ Command* SteeringDisplay::_getCommandForGraphic(SteeringDisplay::DynamicGraphic 
 		case SteeringDisplay::Power:
 			return new Delegate<SteeringDisplay, throttle_t>(this, &SteeringDisplay::_onPowerChanged);
 			break;
+		case SteeringDisplay::Lights:
+			return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onLightsChanged);
+			break;
+		case SteeringDisplay::LeftSignal:
+			return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onLeftSignalChanged);
+			break;
+		case SteeringDisplay::RightSignal:
+			return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onRightSignalChanged);
+			break;
 		default:
 			// do nothing
 			break;
 	}
 }
 
-void SteeringDisplay::_runDynamicGraphics() {
-	for (int32_t i = SteeringDisplay::Dms; i <= SteeringDisplay::Seconds; i++) {
-		DynamicGraphicData data = _dynamicGraphicsData[i];
-		
-		if (data.redraw)
-			data.shape->draw();
+void SteeringDisplay::_runRedrawQueue() {
+	while (!_redrawActionQueue.empty()) {
+		RedrawAction action = _redrawActionQueue.peek();
+		_redrawActionQueue.pop();
+		(action.shape->*action.method)();
 	}
-		
 }
 
-void SteeringDisplay::_initializeDynamicText(Text* textField, SteeringDisplay::DynamicGraphic graphic, int32_t xpos, int32_t ypos, unsigned char* font, std::string str) {
-	_powerText.init(_tft, xpos, ypos, font);
-	_powerText.setDisplayString(str);
-	_dynamicGraphicsData[(int32_t)graphic] = DynamicGraphicData { textField, true };
+void SteeringDisplay::_setDynamicGraphic(DynamicGraphicId id, Shape* shape) {
+	_dynamicGraphics[(int32_t)id] = shape;
+	_redrawActionQueue.push(RedrawAction { shape, &Shape::draw });
+}
+
+void SteeringDisplay::_initializeDynamicText(Text* textField, SteeringDisplay::DynamicGraphicId id, int32_t xpos, int32_t ypos, unsigned char* font, std::string str) {
+	textField->init(_tft, xpos, ypos, font, str);
+	_setDynamicGraphic(id, textField);
 }
 
 void SteeringDisplay::_onDmsChanged(const data_t value) {
@@ -213,6 +232,8 @@ void SteeringDisplay::_onBrakeChanged(const data_t value) {
 
 void SteeringDisplay::_onBatterySocChanged(const batt_t value) {
 	_updateTextField(SteeringDisplay::Soc, _batteryDataToString(value));
+	_batteryIcon.scale(value);
+	_redrawActionQueue.push(RedrawAction { &_batteryIcon, &Shape::draw });
 }
 
 void SteeringDisplay::_onVoltageChanged(const batt_t value) {
@@ -228,18 +249,52 @@ void SteeringDisplay::_onSpeedChanged(const speed_t value) {
 void SteeringDisplay::_onPowerChanged(const throttle_t value) {
 	char buf[4] = { };
 	sprintf(buf, "%03u", (value * 100) / 255);
+	_updateTextField(SteeringDisplay::Power, std::string(buf));
 }
 
-void SteeringDisplay::_updateCircleIcon(DynamicGraphic graphic, data_t value) {
-	auto& data = _dynamicGraphicsData[(int32_t)graphic];
-	data.shape->setColour(int32_t(value & 0x1 ? Green : Red));
-	data.redraw = true;
+void SteeringDisplay::_onLightsChanged(const data_t value) {
+	RedrawAction action { &_lights, 0x0 };
+
+	if (value)
+		action.method = &Shape::draw;
+	else
+		action.method = &Shape::clear;
 }
 
-void SteeringDisplay::_updateTextField(DynamicGraphic graphic, const std::string& value) {
-	auto& data = _dynamicGraphicsData[(int32_t)graphic];
-	((Text*)data.shape)->setDisplayString(value);
-	data.redraw = true;
+void SteeringDisplay::_onLeftSignalChanged(const data_t value) {
+	_updateTurnSignalAnimation(SteeringDisplay::LeftSignal, value);
+}
+
+void SteeringDisplay::_onRightSignalChanged(const data_t value) {
+	_updateTurnSignalAnimation(SteeringDisplay::RightSignal, value);
+}
+
+void SteeringDisplay::_updateCircleIcon(DynamicGraphicId id, data_t value) {
+	auto& circle = _dynamicGraphics[(int32_t)id];
+	circle->setColour(int32_t(value & 0x1 ? Green : Red));
+	_redrawActionQueue.push(RedrawAction { circle, &Shape::draw });
+}
+
+void SteeringDisplay::_updateTextField(DynamicGraphicId id, const std::string& value) {
+	auto& shape = _dynamicGraphics[(int32_t)id];
+	((Text*)shape)->setDisplayString(value);
+	_redrawActionQueue.push(RedrawAction { shape, &Shape::draw });
+}
+
+void SteeringDisplay::_updateTurnSignalAnimation(DynamicGraphicId id, data_t value) {
+	if (value) {
+		if (_animations.find(id) != _animations.end())
+			return;
+		else
+			_animations[id] = new AnimationFlashing(_dynamicGraphics[(int32_t)id], TURN_INTERVAL);
+	} else {
+		if (_animations.find(id) == _animations.end())
+			return;
+		else {
+			delete _animations[id];
+			_animations.erase(id);
+		}
+	}
 }
 
 const std::string _batteryDataToString(const batt_t value) {

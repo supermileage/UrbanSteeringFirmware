@@ -12,4 +12,8 @@ void Rectangle::draw() {
 		_tft->fillrect(_x, _y, _x2, _y2, _colour);
 	else
 		_tft->rect(_x, _y, _x2, _y2, _colour);
-}	
+}
+
+void Rectangle::clear() {
+	_tft->fillrect(_x, _y, _x2, _y2, _background);
+}
