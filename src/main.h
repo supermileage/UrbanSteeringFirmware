@@ -40,10 +40,8 @@ unsigned char get_throttle_val();
 
 /**
  * @brief background thread task which updates lcd display
- * 
- * @param arg unused task arg
  */
-void display_task();
+void runSteeringDisplay();
 
 /**
  * @brief reads incoming can messages and updates speed and battery values for display

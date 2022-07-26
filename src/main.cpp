@@ -36,8 +36,9 @@ using namespace std;
 #define OFFSET MAX_THROTTLE_OUTPUT - (SLOPE * MAX_THROTTLE_INPUT)
 
 SPI_TFT_ILI9341 TFT(D11, D12, D13, A7, D0, A3, "TFT");
-// BufferedSerial pc(USBTX, USBRX); // tx, rx
 CAN can(D10, D2, 500000);
+SteeringDisplay display(&TFT);
+// BufferedSerial pc(USBTX, USBRX); // tx, rx
 
 // Accessories
 DigitalIn lights(A0,PullDown);
@@ -55,14 +56,9 @@ AnalogIn throttle(A6);
 DigitalOut dmsLed(A5);
 
 Timer timerMotor;
-Timer timerDisplay;
+Timer clockResetTimer;
 Timer timerAccessories;
 Timer timerFlash;
-
-// global variables shared between main and display threads
-int g_lastGestureTime = 0;
-int g_lastTime = 0;
-char g_lastGesture = 0;
 
 // Properties to bind to steering GUI and CAN events
 SharedProperty<data_t> dmsVal(0);
@@ -78,8 +74,16 @@ SharedProperty<data_t> turnRight(0);
 SharedProperty<data_t> prevAccVal(0);
 SharedProperty<data_t> lastGesture(0);
 
+// global variables shared between main and display threads
+int g_lastGestureTime = 0;
+int g_lastTime = 0;
+char g_lastGesture = 0;
+
 void initializeDisplay() {
+	// initialize
 	display.init();
+
+	// add data display bindings
 	display.addDynamicGraphicBinding(dmsVal, SteeringDisplay::Dms);
 	display.addDynamicGraphicBinding(ignitionVal, SteeringDisplay::Ignition);
 	display.addDynamicGraphicBinding(brakeVal, SteeringDisplay::Brake);
@@ -92,11 +96,9 @@ void initializeDisplay() {
 	display.addDynamicGraphicBinding(turnRight, SteeringDisplay::RightSignal);
 }
 
-SteeringDisplay display(&TFT);
-
 int main() {
 	timerMotor.start();
-	timerDisplay.start();
+	clockResetTimer.start();
 	timerAccessories.start();
 
 	// Initalize Accessories--it's impossible for left and right blinker to be on simultaneously so this will cause can update to be sent on boot
@@ -104,17 +106,14 @@ int main() {
 
 	initializeDisplay();
 	Thread display_thread;
-	display_thread.start(display_task);
+	display_thread.start(runSteeringDisplay);
 
 	dmsLed.write(1);
 
 	while (1) {
 		handle_reset_gesture();
-
 		handle_accessories();
-
 		handle_motor_inputs();
-		
 		receive_can();
 	}
 }
@@ -223,18 +222,23 @@ void receive_can() {
 }
 
 void handle_reset_gesture() {
-	
 	char thisGesture = ignition.read();
-	int thisGestureTime = timerDisplay.read_ms();
+	int thisGestureTime = clockResetTimer.read_ms();
 	if (g_lastGestureTime + DEBOUNCE_TIME < thisGestureTime && g_lastGesture != thisGesture) {
 
 		if (thisGestureTime <= g_lastGestureTime + GESTURE_MARGIN) {
 			g_lastTime = -1;
 			g_lastGestureTime = 0;
-			timerDisplay.reset();
+			clockResetTimer.reset();
 		} else {
 			g_lastGestureTime = thisGestureTime;
 		}
 	}
 	g_lastGesture = thisGesture;
+}
+
+void runSteeringDisplay() {
+	while (1) {
+		display.run();
+	}
 }

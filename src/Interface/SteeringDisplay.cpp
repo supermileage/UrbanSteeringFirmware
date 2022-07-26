@@ -159,6 +159,14 @@ void SteeringDisplay::run() {
 		pair.second->run(currentTime);
 }
 
+void SteeringDisplay::_runRedrawQueue() {
+	while (!_redrawActionQueue.empty()) {
+		RedrawAction action = _redrawActionQueue.peek();
+		_redrawActionQueue.pop();
+		(action.shape->*action.method)();
+	}
+}
+
 Command* SteeringDisplay::_getDelegateForGraphic(SteeringDisplay::DynamicGraphicId id) {
 	switch (id) {
 		case SteeringDisplay::Dms:
@@ -197,14 +205,6 @@ Command* SteeringDisplay::_getDelegateForGraphic(SteeringDisplay::DynamicGraphic
 		default:
 			// do nothing
 			break;
-	}
-}
-
-void SteeringDisplay::_runRedrawQueue() {
-	while (!_redrawActionQueue.empty()) {
-		RedrawAction action = _redrawActionQueue.peek();
-		_redrawActionQueue.pop();
-		(action.shape->*action.method)();
 	}
 }
 
