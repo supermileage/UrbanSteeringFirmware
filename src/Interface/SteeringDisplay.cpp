@@ -313,12 +313,12 @@ const std::string SteeringDisplay::_batteryDataToString(const batt_t value) {
 void SteeringDisplay::_handleAnimationChanged(DynamicGraphicId id, bool terminate) {
 	if (terminate)
 		_actionQueue.push([this, id]() -> void {
-			if (!_animations.containsKey(id))
+			if (_animations.find(id) == _animations.end())
 				_animations[id] = new AnimationFlashing(&_rightSignal, TURN_FLASHING_INTERVAL);
 		});
 	else
 		_actionQueue.push([this, id]() -> void {
-			if (_animations.containsKey(id)) {
+			if (_animations.find(id) != _animations.end()) {
 				Animation* toDelete = _animations[id];
 				toDelete->stop();
 				_animations.erase(id);

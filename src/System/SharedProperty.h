@@ -73,7 +73,7 @@ class SharedProperty {
 			_valueChangedDelegates.push_back(command);
 		}
 
-		void removeValueChangedEventCommand(Command* command) {
+		void removeValueChangedListener(Command* command) {
 			std::vector<Command*>::iterator it = std::find(_valueChangedDelegates.begin(), _valueChangedDelegates.end(), command);
 
 			if (it != _valueChangedDelegates.end()) {
