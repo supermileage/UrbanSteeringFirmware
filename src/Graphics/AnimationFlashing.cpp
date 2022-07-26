@@ -1,6 +1,6 @@
 #include "AnimationFlashing.h"
 
-void AnimationFlashing::run(int32_t millis) {
+void AnimationFlashing::run(int64_t millis) {
 	if (millis > _lastTimeMillis + _interval) {
 		_lastTimeMillis = millis;
 

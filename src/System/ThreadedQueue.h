@@ -16,9 +16,9 @@ class ThreadedQueue {
 			_stateMutex.unlock();
 		}
 
-		const T& peek() {
+		const T& front() {
 			_stateMutex.lock();
-			T& ret = _queue.peek();
+			T& ret = _queue.front();
 			_stateMutex.unlock();
 
 			return ret;

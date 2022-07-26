@@ -12,7 +12,7 @@ using namespace util;
 /**
  * @brief Defines a property whose value is shared between arbitrary objects / threads
  * 
- * @tparam T 
+ * @tparam T
  */
 template <class T>
 class SharedProperty {
@@ -20,7 +20,7 @@ class SharedProperty {
 		SharedProperty(T value) : _value(value) { }
 
 		~SharedProperty() {
-			for (Command* command : _valueChangedEventCommands) {
+			for (Command* command : _valueChangedDelegates) {
 				delete command;
 			}
 		}
@@ -45,8 +45,8 @@ class SharedProperty {
 			return (T)(_value << shift);
 		}
 
-		T operator!(SharedProperty<T> property) {
-			return !property.getValue();
+		T operator!() {
+			return !_value;
 		}
 
 		void setValue(T value) {
@@ -70,25 +70,25 @@ class SharedProperty {
 		}
 
 		void addValueChangedListener(Command* command) {
-			_valueChangedEventCommands.push_back(command);
+			_valueChangedDelegates.push_back(command);
 		}
 
 		void removeValueChangedEventCommand(Command* command) {
-			std::vector<Command*>::iterator it = std::find(_valueChangedEventCommands.begin(), _valueChangedEventCommands.end(), command);
+			std::vector<Command*>::iterator it = std::find(_valueChangedDelegates.begin(), _valueChangedDelegates.end(), command);
 
-			if (it != _valueChangedEventCommands.end()) {
-				_valueChangedEventCommands.erase(std::remove(_valueChangedEventCommands.begin(), _valueChangedEventCommands.end(), command),
-					_valueChangedEventCommands.end());
+			if (it != _valueChangedDelegates.end()) {
+				_valueChangedDelegates.erase(std::remove(_valueChangedDelegates.begin(), _valueChangedDelegates.end(), command),
+					_valueChangedDelegates.end());
 			}
 		}
 
 	private:
 		T _value;
 		Mutex _stateMutex;
-		std::vector<Command*> _valueChangedEventCommands;
+		std::vector<Command*> _valueChangedDelegates;
 
 		void _onValueChanged() {
-			for (Command* command : _valueChangedEventCommands) {
+			for (Command* command : _valueChangedDelegates) {
 				command->execute((CommandArgs)&_value);
 			}
 		}

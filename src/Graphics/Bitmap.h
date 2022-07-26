@@ -5,7 +5,6 @@
 
 class Bitmap : public Shape {
 	public:
-		Bitmap() { }
 		~Bitmap() { }
 		void init(SPI_TFT_ILI9341* tft, int32_t xpos, int32_t ypos, int32_t width, int32_t height, unsigned char* bitmap);
 		void draw() override;

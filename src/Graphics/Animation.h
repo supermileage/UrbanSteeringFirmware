@@ -5,16 +5,14 @@
 
 class Animation {
 	public:
-		Animation(Shape* shape) : _shape(shape) {
-			_lastTimeMillis = 0;
-		}
-
-		~Animation() { }
-		virtual void run(int32_t millis) = 0;
+		Animation(Shape* shape);
+		virtual ~Animation() { }
+		virtual void run(int64_t millis) = 0;
+		virtual void stop();
 
 	protected:
 		Shape* _shape;
-		int32_t _lastTimeMillis;
+		int64_t _lastTimeMillis;
 };
 
 #endif

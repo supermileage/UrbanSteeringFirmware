@@ -2,6 +2,7 @@
 #define _STEERING_DISPLAY_H_
 
 #include <vector>
+#include <functional>
 
 #include "mbed.h"
 #include "Mutex.h"
@@ -34,24 +35,25 @@ class SteeringDisplay {
 
 		template <class T>
 		void addDynamicGraphicBinding(SharedProperty<T>& property, DynamicGraphicId id) {
-			Command* command = _getDelegateForGraphic(graphic);
+			Command* command = _getDelegateForGraphicId(id);
 			property.addValueChangedListener(command);
 		}
 
 	private:
-		struct RedrawAction { 
+		struct RedrawAction {
 			Shape* shape;
 			void (Shape::*method)(void);
 		};
 
 		SPI_TFT_ILI9341* _tft;
-		std::vector<Shape*> _dynamicGraphics;							// graphics mapped to their respective id
-		ThreadedQueue<RedrawAction> _redrawActionQueue;					// queue of individual redraw actions
+		std::vector<Shape*> _dynamicGraphics;							// id (as index) to dynamic graphics map
+		ThreadedQueue<RedrawAction> _redrawActionQueue;					// queue of actions: main thread adds to this, ui thread executes
+		ThreadedQueue<std::function<void()>> _actionQueue;				// queue of functions (can be assigned from lambdas)
 		ThreadedMap<DynamicGraphicId, Animation*> _animations;			// graphic id to timed animation map
 		Timer _animationTimer;											// timer for animations to keep track of their states
 		int32_t _lastTimeMinutes;
 		int32_t _lastTimeSeconds;
-		// Graphics
+		// Dynamic Graphics (these are bound to external shared properties)
 		Circle _dmsIcon;
 		Circle _ignitionIcon;
 		Circle _brakeIcon;
@@ -63,18 +65,17 @@ class SteeringDisplay {
 		Text _timeTextMinutes;
 		Text _timeTextSeconds;
 		Bitmap _lights;
-		CompositeShape _leftSignal;
-		CompositeShape _rightSignal;
-
-		Command* _getDelegateForGraphic(DynamicGraphicId id);
+		Bitmap _leftSignal;
+		Bitmap _rightSignal;
+		
 		void _runRedrawQueue();
+
+		// Initialization helpers
+		Command* _getDelegateForGraphicId(DynamicGraphicId id);
 		void _setDynamicGraphic(DynamicGraphicId id, Shape* shape);
 		void _initializeDynamicText(Text* textField, DynamicGraphicId id, int32_t xpos, int32_t ypos, unsigned char* font, std::string str);
-		void _updateCircleIcon(DynamicGraphicId id, data_t value);
-		void _updateTextField(DynamicGraphicId id, const std::string& value);
-		void _updateTurnSignalAnimation(DynamicGraphicId id, data_t value);
-		const std::string _batteryDataToString(const batt_t value);
-		
+
+		// Data changed event callbacks (these are latched to relevant property changed events)
 		void _onDmsChanged(const data_t value);
 		void _onIgnitionChanged(const data_t value);
 		void _onBrakeChanged(const data_t value);
@@ -85,6 +86,12 @@ class SteeringDisplay {
 		void _onLightsChanged(const data_t value);
 		void _onLeftSignalChanged(const data_t value);
 		void _onRightSignalChanged(const data_t value);
+		
+		// Data changed helpers
+		void _updateCircleIcon(DynamicGraphicId id, data_t value);
+		void _updateTextField(DynamicGraphicId id, const std::string& value);
+		const std::string _batteryDataToString(const batt_t value);
+		void _handleAnimationChanged(DynamicGraphicId id, bool terminate);
 
 };
 

@@ -10,10 +10,14 @@ class ThreadedMap {
 		~ThreadedMap() { }
 
 		V& operator[](const K& k) {
-			return _map[k];
+			_stateMutex.lock();
+			V& ret = _map[k];
+			_stateMutex.unlock();
+
+			return ret;
 		}
 
-		std::unordered_map<K, V>::iterator find(K key) {
+		typename std::unordered_map<K, V>::iterator find(K key) {
 			_stateMutex.lock();
 			auto ret = _map.find(key);
 			_stateMutex.unlock();
@@ -27,7 +31,7 @@ class ThreadedMap {
 			_stateMutex.unlock();
 		}
 
-		std::unordered_map<K, V>::iterator begin() {
+		typename std::unordered_map<K, V>::iterator begin() {
 			_stateMutex.lock();
 			auto ret = _map.begin();
 			_stateMutex.unlock();
@@ -35,11 +39,19 @@ class ThreadedMap {
 			return ret;
 		}
 
-		std::unordered_map<K, V>::iterator end() {
+		typename std::unordered_map<K, V>::iterator end() {
 			_stateMutex.lock();
 			auto ret = _map.end();
 			_stateMutex.unlock();
 			
+			return ret;
+		}
+
+		bool containsKey(K key) {
+			_stateMutex.lock();
+			bool ret = _map.find(key) != _map.end();
+			_stateMutex.unlock();
+
 			return ret;
 		}
 

@@ -5,11 +5,11 @@
 
 class AnimationFlashing : public Animation {
 	public:
-		AnimationFlashing(Shape* shape, int32_t interval) : Animation(shape), _interval(interval) { }
-		void run(int32_t millis);
+		AnimationFlashing(Shape* shape, int64_t interval) : Animation(shape), _interval(interval) { }
+		void run(int64_t millis);
 		
 	private:
-		int32_t _interval;
+		int64_t _interval;
 		bool _isDrawn = false;
 };
 

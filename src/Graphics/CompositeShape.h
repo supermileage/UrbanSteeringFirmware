@@ -7,7 +7,6 @@
 
 class CompositeShape : public Shape {
 	public:
-		CompositeShape() { }
 		~CompositeShape() { }
 		void init();
 		void init(const std::vector<Shape*>& components);

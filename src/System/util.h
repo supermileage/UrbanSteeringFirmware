@@ -2,6 +2,10 @@
 #define _STEERING_UTIL_H_
 
 namespace util {
+
+	/**
+	 * @brief abstract base: encapsulates a method invocation with possible execution arguments
+	 */
 	typedef void* CommandArgs;
 	class Command {
 		public:
@@ -9,6 +13,11 @@ namespace util {
 			virtual void execute(CommandArgs args) = 0;
 	};
 
+	/**
+	 * @brief encapsulates a callback function with possible args T
+	 * 
+	 * @tparam T type of param for callback function
+	 */
 	template <class T>
 	class FunctionalCallback : public Command {
 		public:
@@ -22,6 +31,12 @@ namespace util {
 			void (*_callback)(const T);
 	};
 
+	/**
+	 * @brief encapsulates a callback method for type T
+	 * 
+	 * @tparam T class which implements method
+	 * @tparam R param for T::method
+	 */
 	template <class T, class R>
 	class Delegate : public Command {
 		public:

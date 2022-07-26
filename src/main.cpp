@@ -1,23 +1,18 @@
 #include <string>
+#include <chrono>
 #include <cmath>
 
 #include "stdio.h"
 #include "rtos.h"
-
 #include "can_common.h"
 #include "SPI_TFT_ILI9341.h"
 
-#include "Arial12x12.h"
-#include "Arial28x28.h"
-#include "font_big.h"
-#include "graphics.h"
-
 #include "SharedProperty.h"
 #include "SteeringDisplay.h"
-
 #include "main.h"
 
 using namespace std;
+using namespace std::chrono;
 
 #define DEBUG_THROTTLE 0
 
@@ -75,8 +70,8 @@ SharedProperty<data_t> prevAccVal(0);
 SharedProperty<data_t> lastGesture(0);
 
 // global variables shared between main and display threads
-int g_lastGestureTime = 0;
-int g_lastTime = 0;
+int64_t g_lastGestureTime = 0;
+int64_t g_lastTime = 0;
 char g_lastGesture = 0;
 
 void initializeDisplay() {
@@ -107,7 +102,7 @@ int main() {
 	initializeDisplay();
 	Thread display_thread;
 	display_thread.start(runSteeringDisplay);
-
+	
 	dmsLed.write(1);
 
 	while (1) {
@@ -119,7 +114,7 @@ int main() {
 }
 
 void handle_accessories() {
-	if (timerAccessories.read_ms() > ACCESSORIES_TRANSMIT_INTERVAL) {
+	if (duration_cast<milliseconds>(timerAccessories.elapsed_time()).count() > ACCESSORIES_TRANSMIT_INTERVAL) {
 		char hazardsOn;
 		char currentAccVal = read_accessory_inputs(hazardsOn);
 		if ((prevAccVal.getValue() != currentAccVal)) {
@@ -157,7 +152,7 @@ char read_accessory_inputs(char& hazardsVal){
 }
 
 void handle_motor_inputs(){
-	if (timerMotor.read_ms() > MOTOR_CONTROLLER_TRANSMIT_INTERVAL) {
+	if (duration_cast<milliseconds>(timerMotor.elapsed_time()).count() > MOTOR_CONTROLLER_TRANSMIT_INTERVAL) {
 
 		dmsVal = getDmsVal();
 		ignitionVal = (char)ignition.read();
@@ -223,7 +218,7 @@ void receive_can() {
 
 void handle_reset_gesture() {
 	char thisGesture = ignition.read();
-	int thisGestureTime = clockResetTimer.read_ms();
+	int64_t thisGestureTime = duration_cast<milliseconds>(clockResetTimer.elapsed_time()).count();
 	if (g_lastGestureTime + DEBOUNCE_TIME < thisGestureTime && g_lastGesture != thisGesture) {
 
 		if (thisGestureTime <= g_lastGestureTime + GESTURE_MARGIN) {
