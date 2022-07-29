@@ -97,18 +97,21 @@ void SteeringDisplay::init() {
 	// Dms
 	_tft->locate(DMS_X, STATUS_Y);
 	_tft->printf("DMS");
-	_dmsIcon.init(_tft, DMS_X + CIRCLE_X_OFFSET_DMS, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Red, true);
+	_dmsIcon.init(_tft, DMS_X + CIRCLE_X_OFFSET_DMS, CIRCLE_Y_OFFSET, Red, CIRCLE_RADIUS, true);
 	_setDynamicGraphic(SteeringDisplay::Dms, &_dmsIcon);
+
 	// Ignition
 	_tft->locate(IGNITION_X, STATUS_Y);
 	_tft->printf("IGN");
-	_ignitionIcon.init(_tft, IGNITION_X + CIRCLE_X_OFFSET_IGNITION, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Red, true);
+	_ignitionIcon.init(_tft, IGNITION_X + CIRCLE_X_OFFSET_IGNITION, CIRCLE_Y_OFFSET, Red, CIRCLE_RADIUS, true);
 	_setDynamicGraphic(SteeringDisplay::Ignition, &_ignitionIcon);
+
 	// Brake
 	_tft->locate(BRAKE_X, STATUS_Y);
 	_tft->printf("BRK");
-	_brakeIcon.init(_tft, BRAKE_X + CIRCLE_X_OFFSET_BRAKE, CIRCLE_Y_OFFSET, CIRCLE_RADIUS, Green, true);
+	_brakeIcon.init(_tft, BRAKE_X + CIRCLE_X_OFFSET_BRAKE, CIRCLE_Y_OFFSET, Green, CIRCLE_RADIUS, true);
 	_setDynamicGraphic(SteeringDisplay::Brake, &_brakeIcon);
+
 	// Battery icon w/ static outline graphic
 	_tft->rect(BATTERY_LEFT_X, BATTERY_LEFT_Y, BATTERY_LEFT_X + BATTERY_WIDTH, BATTERY_LEFT_Y + BATTERY_HEIGHT, White);
 	_tft->rect(BATTERY_BTN_X, BATTERY_BTN_Y, BATTERY_BTN_X + BATTERY_BTN_WIDTH, BATTERY_BTN_Y + BATTERY_BTN_HEIGHT, White);
@@ -120,24 +123,27 @@ void SteeringDisplay::init() {
 	// Battery Voltage
 	_initializeDynamicText(&_batteryVoltageText, SteeringDisplay::Voltage, BATTERY_TEXT_X, VOLTAGE_TEXT_Y, (unsigned char*)SMALL_FONT, "00.0 V");
 
+	// Cool Font Graphics Labels
+	_tft->locate(SPEED_X_LABEL, SPEED_Y_LABEL);
+	_tft->printf("SPD");
+	_tft->locate(POWER_X_LABEL, POWER_Y_LABEL);
+	_tft->printf("PWR");
+	_tft->locate(TIME_X_LABEL, TIME_Y_LABEL);
+	_tft->printf("TIME");
+	
 	/* Cool Font Graphics */
 	_tft->set_font((unsigned char*) COOL_FONT);
 
 	// Speed
-	_tft->locate(SPEED_X_LABEL, SPEED_Y_LABEL);
-	_tft->printf("SPD");
+
 	_tft->locate(SPEED_X + SPEED_X_UNIT_OFFSET, SPEED_Y);
 	_tft->printf("K/H");
 	_initializeDynamicText(&_speedText, SteeringDisplay::Speed, SPEED_X, SPEED_Y, (unsigned char*)COOL_FONT, "00");
 	// Throttle
-	_tft->locate(POWER_X_LABEL, POWER_Y_LABEL);
-	_tft->printf("PWR");
 	_tft->locate(POWER_X + POWER_X_UNIT_OFFSET, POWER_Y);
 	_tft->printf("%%");
 	_initializeDynamicText(&_powerText, SteeringDisplay::Power, POWER_X, POWER_Y, (unsigned char*)COOL_FONT, "000");
 	// Time
-	_tft->locate(TIME_X_LABEL, TIME_Y_LABEL);
-	_tft->printf("TIME");
 	_tft->locate(COLON_X, TIME_Y);
 	_tft->printf(":");
 	_initializeDynamicText(&_timeTextMinutes, SteeringDisplay::Minutes, MINUTES_X, TIME_Y, (unsigned char*)COOL_FONT, "00");
@@ -147,32 +153,29 @@ void SteeringDisplay::init() {
 	
 	// Headlights
 	_lights.init(_tft, LIGHTS_X, LIGHTS_Y, LIGHTS_WIDTH, LIGHTS_HEIGHT, graphicLights);
+	_dynamicGraphics[SteeringDisplay::Lights] = &_lights;
 	// Left Signal
 	_leftSignal.init(_tft, TURN_LEFT_X, TURN_LEFT_Y, TURN_WIDTH, TURN_HEIGHT, graphicLeftArrow);
+	_dynamicGraphics[SteeringDisplay::LeftSignal] = &_leftSignal;
 	// Right Signal
 	_rightSignal.init(_tft, TURN_RIGHT_X, TURN_RIGHT_Y, TURN_WIDTH, TURN_HEIGHT, graphicRightArrow);
-
-	// #if DEBUG_THROTTLE
-	// 	TFT.locate(THROTTLE_RAW_X, THROTTLE_RAW_Y);
-	// 	TFT.printf("0000");
-	// #endif
+	_dynamicGraphics[SteeringDisplay::RightSignal] = &_rightSignal;
 
 	_runRedrawQueue();
 }
 
 void SteeringDisplay::run() {
 	_runRedrawQueue();
-	
+
 	// run action queue
 	while (!_actionQueue.empty()) {
 		auto& action = _actionQueue.front();
-		_redrawActionQueue.pop();
+		_actionQueue.pop();
 		(action)();
 	}
 
 	// run time-based animations
 	int64_t currentTime = std::chrono::duration_cast<std::chrono::milliseconds>(_animationTimer.elapsed_time()).count();
-
 	for (const auto& pair : _animations)
 		pair.second->run(currentTime);
 }
@@ -229,7 +232,7 @@ Command* SteeringDisplay::_getDelegateForGraphicId(SteeringDisplay::DynamicGraph
 }
 
 void SteeringDisplay::_setDynamicGraphic(DynamicGraphicId id, Shape* shape) {
-	_dynamicGraphics[(int32_t)id] = shape;
+	_dynamicGraphics[id] = shape;
 	_redrawActionQueue.push(RedrawAction { shape, &Shape::draw });
 }
 
@@ -292,13 +295,13 @@ void SteeringDisplay::_onRightSignalChanged(const data_t value) {
 }
 
 void SteeringDisplay::_updateCircleIcon(DynamicGraphicId id, data_t value) {
-	auto& circle = _dynamicGraphics[(int32_t)id];
-	circle->setColour(int32_t(value & 0x1 ? Green : Red));
+	auto& circle = _dynamicGraphics[id];
+	circle->setColour(int32_t(value ? Green : Red));
 	_redrawActionQueue.push(RedrawAction { circle, &Shape::draw });
 }
 
 void SteeringDisplay::_updateTextField(DynamicGraphicId id, const std::string& value) {
-	auto& shape = _dynamicGraphics[(int32_t)id];
+	auto& shape = _dynamicGraphics[id];
 	((Text*)shape)->setDisplayString(value);
 	_redrawActionQueue.push(RedrawAction { shape, &Shape::draw });
 }
@@ -313,16 +316,16 @@ const std::string SteeringDisplay::_batteryDataToString(const batt_t value) {
 void SteeringDisplay::_handleAnimationChanged(DynamicGraphicId id, bool terminate) {
 	if (terminate)
 		_actionQueue.push([this, id]() -> void {
-			if (_animations.find(id) == _animations.end())
-				_animations[id] = new AnimationFlashing(&_rightSignal, TURN_FLASHING_INTERVAL);
-		});
-	else
-		_actionQueue.push([this, id]() -> void {
 			if (_animations.find(id) != _animations.end()) {
 				Animation* toDelete = _animations[id];
 				toDelete->stop();
 				_animations.erase(id);
 				delete toDelete;
 			}
+		});
+	else
+		_actionQueue.push([this, id]() -> void {
+			if (_animations.find(id) == _animations.end())
+				_animations[id] = new AnimationFlashing(_dynamicGraphics[id], TURN_FLASHING_INTERVAL);
 		});
 }

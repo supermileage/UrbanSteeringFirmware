@@ -1,11 +1,10 @@
 #ifndef _STEERING_DISPLAY_H_
 #define _STEERING_DISPLAY_H_
 
-#include <vector>
-#include <functional>
+#include <mstd_functional>
 #include <unordered_map>
+#include <mbed.h>
 
-#include "mbed.h"
 #include "Mutex.h"
 #include "SPI_TFT_ILI9341.h"
 #include "util.h"
@@ -45,11 +44,16 @@ class SteeringDisplay {
 			void (Shape::*method)(void);
 		};
 
+		struct InternalAction {
+			void (SteeringDisplay::*method)(data_t);
+			data_t data;
+		};
+
 		SPI_TFT_ILI9341* _tft;
-		std::vector<Shape*> _dynamicGraphics;							// id (as index) to dynamic graphics map
-		ThreadedQueue<RedrawAction> _redrawActionQueue;					// queue of actions: main thread adds to this, ui thread executes
-		ThreadedQueue<std::function<void()>> _actionQueue;				// queue of functions (can be assigned from lambdas)
+		std::unordered_map<DynamicGraphicId, Shape*> _dynamicGraphics;	// id (as index) to dynamic graphics map
 		std::unordered_map<DynamicGraphicId, Animation*> _animations;	// graphic id to timed animation map
+		ThreadedQueue<RedrawAction> _redrawActionQueue;					// queue of actions: main thread adds to this, ui thread executes
+		ThreadedQueue<std::function<void(void)>> _actionQueue;			// queue of generic functions (can include lambdas with captures)
 		Timer _animationTimer;											// timer for animations to keep track of their states
 		int32_t _lastTimeMinutes;
 		int32_t _lastTimeSeconds;
@@ -91,7 +95,7 @@ class SteeringDisplay {
 		void _updateCircleIcon(DynamicGraphicId id, data_t value);
 		void _updateTextField(DynamicGraphicId id, const std::string& value);
 		const std::string _batteryDataToString(const batt_t value);
-		void _handleAnimationChanged(DynamicGraphicId id, bool terminate);
+		void _handleAnimationChanged(DynamicGraphicId id, bool value);
 
 };
 

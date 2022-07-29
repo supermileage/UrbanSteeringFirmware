@@ -1,8 +1,9 @@
 #include <string>
 #include <chrono>
 #include <cmath>
+#include <mbed.h>
+#include <stdio.h>
 
-#include "stdio.h"
 #include "rtos.h"
 #include "can_common.h"
 #include "SPI_TFT_ILI9341.h"
@@ -30,7 +31,7 @@ using namespace std::chrono;
 #define SLOPE (MAX_THROTTLE_OUTPUT - MIN_THROTTLE_OUTPUT) / (MAX_THROTTLE_INPUT - MIN_THROTTLE_INPUT)
 #define OFFSET MAX_THROTTLE_OUTPUT - (SLOPE * MAX_THROTTLE_INPUT)
 
-SPI_TFT_ILI9341 TFT(D11, D12, D13, A7, D0, A3, "TFT");
+SPI_TFT_ILI9341 TFT(D11, D12, D13, A7, D0, A3);
 CAN can(D10, D2, 500000);
 SteeringDisplay display(&TFT);
 // BufferedSerial pc(USBTX, USBRX); // tx, rx
@@ -62,10 +63,10 @@ SharedProperty<data_t> brakeVal(0);
 SharedProperty<batt_t> batterySoc(0);
 SharedProperty<batt_t> batteryVoltage(0);
 SharedProperty<speed_t> currentSpeed(0);
-SharedProperty<throttle_t> currentThrottle(0);
+SharedProperty<throttle_t> throttleVal(0);
 SharedProperty<data_t> lightsVal(0);
-SharedProperty<data_t> turnLeft(0);
-SharedProperty<data_t> turnRight(0);
+SharedProperty<data_t> turnLeftVal(0);
+SharedProperty<data_t> turnRightVal(0);
 SharedProperty<data_t> prevAccVal(0);
 SharedProperty<data_t> lastGesture(0);
 
@@ -85,10 +86,10 @@ void initializeDisplay() {
 	display.addDynamicGraphicBinding(batterySoc, SteeringDisplay::Soc);
 	display.addDynamicGraphicBinding(batteryVoltage, SteeringDisplay::Voltage);
 	display.addDynamicGraphicBinding(currentSpeed, SteeringDisplay::Speed);
-	display.addDynamicGraphicBinding(currentThrottle, SteeringDisplay::Power);
+	display.addDynamicGraphicBinding(throttleVal, SteeringDisplay::Power);
 	display.addDynamicGraphicBinding(lightsVal, SteeringDisplay::Lights);
-	display.addDynamicGraphicBinding(turnLeft, SteeringDisplay::LeftSignal);
-	display.addDynamicGraphicBinding(turnRight, SteeringDisplay::RightSignal);
+	display.addDynamicGraphicBinding(turnLeftVal, SteeringDisplay::LeftSignal);
+	display.addDynamicGraphicBinding(turnRightVal, SteeringDisplay::RightSignal);
 }
 
 int main() {
@@ -100,6 +101,7 @@ int main() {
 	prevAccVal = 0xFF;
 
 	initializeDisplay();
+
 	Thread display_thread;
 	display_thread.start(runSteeringDisplay);
 	
@@ -137,17 +139,20 @@ char read_accessory_inputs(char& hazardsVal){
 	char brakeVal = (char)(!brake.read());
     char hornVal = (char)(horn.read());
     hazardsVal = (char)(hazards.read());
-    turnLeft = (char)(leftBlinker.read());
-    turnRight = (char)(rightBlinker.read());
+    char turnLeft = (char)(leftBlinker.read());
+    char turnRight = (char)(rightBlinker.read());
     char wiperVal = (char)(wipers.read());
 
 	// hazards on == both blinkers turned on at the same time
     if (hazardsVal) {
-		turnLeft = 1;
-        turnRight = 1;
-    }
+		turnLeftVal = 1;
+        turnRightVal = 1;
+    } else {
+		turnLeftVal = turnLeft;
+		turnRightVal = turnRight;
+	}
 
-    char dataStr = (wiperVal << 6) | (turnLeft << 5) | (turnRight << 4) | (hazardsVal << 3) | (hornVal << 2) | (brakeVal << 1) | lightsVal.getValue();
+    char dataStr = (wiperVal << 6) | (turnLeftVal << 5) | (turnRightVal << 4) | (hazardsVal << 3) | (hornVal << 2) | (brakeVal << 1) | lightsVal.getValue();
     return dataStr;
 }
 
@@ -158,18 +163,20 @@ void handle_motor_inputs(){
 		ignitionVal = (char)ignition.read();
 		brakeVal = (char)!brake.read();
 
-		currentThrottle = get_throttle_val();
+		uint8_t currentThrottle = get_throttle_val();
 		
 		if (!dmsVal.getValue() || !ignitionVal.getValue() || brakeVal.getValue()) {
 			currentThrottle = 0;
 		}
 
+		throttleVal = currentThrottle;
+
 		// Throttle Data
-		const unsigned char throttleData[] = { currentThrottle.getValue() };
+		const unsigned char throttleData[] = { throttleVal.getValue() };
 		can.write(CANMessage(CAN_STEERING_THROTTLE, throttleData, 1));
 
 		// Ready Data
-		char readyVal = (brakeVal.getValue() << 2) | (dmsVal.getValue() << 1) | ignitionVal.getValue();
+		char readyVal = (brakeVal << 2) | (dmsVal << 1) | ignitionVal.getValue();
 		const char readyData[] = { readyVal };
 		can.write(CANMessage(CAN_STEERING_READY, readyData, 1));
 
@@ -201,7 +208,7 @@ data_t getDmsVal() {
 
 // Checks for gps speed / bms data updates from telemetry
 void receive_can() {
-    CANMessage msg;
+	CANMessage msg;
 
 	if (can.read(msg)) {
 		if (msg.id == CAN_TELEMETRY_GPS_DATA) {
