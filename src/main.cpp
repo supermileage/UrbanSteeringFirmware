@@ -69,6 +69,7 @@ SharedProperty<data_t> turnLeftVal(0);
 SharedProperty<data_t> turnRightVal(0);
 SharedProperty<data_t> prevAccVal(0);
 SharedProperty<data_t> lastGesture(0);
+SharedProperty<steering_time_t> timeVal(steering_time_t { 0, 0 });
 
 // global variables shared between main and display threads
 int64_t g_lastGestureTime = 0;
@@ -90,6 +91,7 @@ void initializeDisplay() {
 	display.addDynamicGraphicBinding(lightsVal, SteeringDisplay::Lights);
 	display.addDynamicGraphicBinding(turnLeftVal, SteeringDisplay::LeftSignal);
 	display.addDynamicGraphicBinding(turnRightVal, SteeringDisplay::RightSignal);
+	display.addDynamicGraphicBinding(timeVal, SteeringDisplay::Minutes);
 }
 
 int main() {
@@ -108,7 +110,7 @@ int main() {
 	dmsLed.write(1);
 
 	while (1) {
-		handle_reset_gesture();
+		handleTime();
 		handle_accessories();
 		handle_motor_inputs();
 		receive_can();
@@ -223,19 +225,23 @@ void receive_can() {
 	}
 }
 
-void handle_reset_gesture() {
+void handleTime() {
 	char thisGesture = ignition.read();
-	int64_t thisGestureTime = duration_cast<milliseconds>(clockResetTimer.elapsed_time()).count();
-	if (g_lastGestureTime + DEBOUNCE_TIME < thisGestureTime && g_lastGesture != thisGesture) {
+	int64_t currentTime = duration_cast<milliseconds>(clockResetTimer.elapsed_time()).count();
 
-		if (thisGestureTime <= g_lastGestureTime + GESTURE_MARGIN) {
+	// update timeVal
+	if (g_lastGestureTime + DEBOUNCE_TIME < currentTime && g_lastGesture != thisGesture) {
+		if (currentTime <= g_lastGestureTime + GESTURE_MARGIN) {
+			currentTime = 0;
 			g_lastTime = -1;
 			g_lastGestureTime = 0;
 			clockResetTimer.reset();
 		} else {
-			g_lastGestureTime = thisGestureTime;
+			g_lastGestureTime = currentTime;
 		}
 	}
+	
+	timeVal = steering_time_t { (int)currentTime / 1000 / 60, (int)currentTime / 1000 % 60 };
 	g_lastGesture = thisGesture;
 }
 

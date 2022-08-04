@@ -55,8 +55,7 @@ class SteeringDisplay {
 		ThreadedQueue<RedrawAction> _redrawActionQueue;					// queue of actions: main thread adds to this, ui thread executes
 		ThreadedQueue<std::function<void(void)>> _actionQueue;			// queue of generic functions (can include lambdas with captures)
 		Timer _animationTimer;											// timer for animations to keep track of their states
-		int32_t _lastTimeMinutes;
-		int32_t _lastTimeSeconds;
+		steering_time_t _lastTime;
 		// Dynamic Graphics (these are bound to external shared properties)
 		Circle _dmsIcon;
 		Circle _ignitionIcon;
@@ -90,6 +89,7 @@ class SteeringDisplay {
 		void _onLightsChanged(const data_t value);
 		void _onLeftSignalChanged(const data_t value);
 		void _onRightSignalChanged(const data_t value);
+		void _onTimeChanged(const steering_time_t value);
 
 		// Data changed helpers
 		void _updateCircleIcon(DynamicGraphicId id, data_t value);

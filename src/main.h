@@ -57,6 +57,6 @@ void initializeDisplay();
 /**
  * @brief checks for and handles time reset gesture
  */
-void handle_reset_gesture();
+void handleTime();
 
 #endif

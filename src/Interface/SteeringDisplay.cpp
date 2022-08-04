@@ -223,6 +223,9 @@ Command* SteeringDisplay::_getDelegateForGraphicId(SteeringDisplay::DynamicGraph
 		case SteeringDisplay::RightSignal:
 			return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onRightSignalChanged);
 			break;
+		case SteeringDisplay::Minutes:
+			return new Delegate<SteeringDisplay, steering_time_t>(this, &SteeringDisplay::_onTimeChanged);
+			break;
 		default:
 			// do nothing
 			break;
@@ -292,6 +295,21 @@ void SteeringDisplay::_onLeftSignalChanged(const data_t value) {
 
 void SteeringDisplay::_onRightSignalChanged(const data_t value) {
 	_handleAnimationChanged(SteeringDisplay::RightSignal, !value);
+}
+
+void SteeringDisplay::_onTimeChanged(const steering_time_t value) {
+	char buf[4] = { };
+	if (_lastTime.minutes != value.minutes) {
+		_lastTime.minutes = value.minutes;
+		sprintf(buf, "%02d", value.minutes);
+		_updateTextField(SteeringDisplay::Minutes, std::string(buf));
+	}
+
+	if(_lastTime.seconds != value.seconds) {
+		_lastTime.seconds = value.seconds;
+		sprintf(buf, "%02d", value.seconds);
+		_updateTextField(SteeringDisplay::Seconds, std::string(buf));
+	}
 }
 
 void SteeringDisplay::_updateCircleIcon(DynamicGraphicId id, data_t value) {
