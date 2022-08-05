@@ -29,7 +29,7 @@ void handle_motor_inputs();
  * 
  * @return bool indicating whether dead man's switch is on/off
  */
-char get_dms_val();
+data_t getDmsVal();
 
 /**
  * @brief Gets the value of throttle as unsigned char (0 <= value <= 255)
@@ -40,10 +40,8 @@ unsigned char get_throttle_val();
 
 /**
  * @brief background thread task which updates lcd display
- * 
- * @param arg unused task arg
  */
-void display_task();
+void runSteeringDisplay();
 
 /**
  * @brief reads incoming can messages and updates speed and battery values for display
@@ -54,11 +52,11 @@ void receive_can();
  * @brief Initializes LCD display
  * 
  */
-void initialize_display();
+void initializeDisplay();
 
 /**
  * @brief checks for and handles time reset gesture
  */
-void handle_reset_gesture();
+void handleTime();
 
 #endif
