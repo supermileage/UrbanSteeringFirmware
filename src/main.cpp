@@ -165,7 +165,7 @@ void handle_motor_inputs(){
 		ignitionVal = (char)ignition.read();
 		brakeVal = (char)!brake.read();
 
-		uint8_t currentThrottle = get_throttle_val();
+		throttle_t currentThrottle = get_throttle_val();
 		
 		if (!dmsVal.getValue() || !ignitionVal.getValue() || brakeVal.getValue()) {
 			currentThrottle = 0;
@@ -174,7 +174,7 @@ void handle_motor_inputs(){
 		throttleVal = currentThrottle;
 
 		// Throttle Data
-		const unsigned char throttleData[] = { throttleVal.getValue() };
+		const throttle_t throttleData[] = { throttleVal.getValue() };
 		can.write(CANMessage(CAN_STEERING_THROTTLE, throttleData, 1));
 
 		// Ready Data
@@ -186,16 +186,16 @@ void handle_motor_inputs(){
 	}
 }
 
-unsigned char get_throttle_val() {
+throttle_t get_throttle_val() {
 	float throttleAsFloat = throttle.read();
 
 	if (throttleAsFloat <= MIN_THROTTLE_INPUT) {
-		return (unsigned char)MIN_THROTTLE_OUTPUT;
+		return (throttle_t)MIN_THROTTLE_OUTPUT;
 	} else if (throttleAsFloat >= MAX_THROTTLE_INPUT) {
-		return (unsigned char)MAX_THROTTLE_OUTPUT;
+		return (throttle_t)MAX_THROTTLE_OUTPUT;
 	}
 
-	return (unsigned char)(throttleAsFloat * SLOPE + OFFSET);
+	return (throttle_t)(throttleAsFloat * SLOPE + OFFSET);
 }
 
 data_t getDmsVal() {
