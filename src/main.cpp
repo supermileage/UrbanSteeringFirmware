@@ -31,25 +31,28 @@ using namespace std::chrono;
 #define SLOPE (MAX_THROTTLE_OUTPUT - MIN_THROTTLE_OUTPUT) / (MAX_THROTTLE_INPUT - MIN_THROTTLE_INPUT)
 #define OFFSET MAX_THROTTLE_OUTPUT - (SLOPE * MAX_THROTTLE_INPUT)
 
-SPI_TFT_ILI9341 TFT(D11, D12, D13, A7, D0, A3);
+SPI_TFT_ILI9341 TFT(D11, D12, D13, D9, D0, A4);
 CAN can(D10, D2, 500000);
 SteeringDisplay display(&TFT);
 // BufferedSerial pc(USBTX, USBRX); // tx, rx
 
 // Accessories
-DigitalIn lights(A0,PullDown);
 DigitalIn brake(D1,PullUp);
-DigitalIn horn(D5,PullDown);
-DigitalIn hazards(D9,PullDown);
-DigitalIn rightBlinker(D4,PullDown);
-DigitalIn leftBlinker(D3,PullDown);
-DigitalIn wipers(A2,PullDown);
 
 // Ready
-DigitalIn ignition(D6,PullDown);
 AnalogIn dms(A1);
 AnalogIn throttle(A6);
 DigitalOut dmsLed(A5);
+
+//shift registers
+DigitalOut shift_clk(D3);
+DigitalOut led_out(D4);
+DigitalOut shiftLatch(D5);
+DigitalIn buttonIn(D6);
+
+//Joystick
+AnalogIn joyX(A3);
+AnalogIn joyY(A2);
 
 Timer timerMotor;
 Timer clockResetTimer;
@@ -99,6 +102,10 @@ int main() {
 	clockResetTimer.start();
 	timerAccessories.start();
 
+	shift_clk.write(0);
+	led_out.write(0);
+	shiftLatch.write(0);
+
 	// Initalize Accessories--it's impossible for left and right blinker to be on simultaneously so this will cause can update to be sent on boot
 	prevAccVal = 0xFF;
 
@@ -137,13 +144,18 @@ void handle_accessories() {
 }
 
 char read_accessory_inputs(char& hazardsVal){
-    lightsVal = (char)(lights.read());
+    //TODO
+	lightsVal = 0;
 	char brakeVal = (char)(!brake.read());
-    char hornVal = (char)(horn.read());
-    hazardsVal = (char)(hazards.read());
-    char turnLeft = (char)(leftBlinker.read());
-    char turnRight = (char)(rightBlinker.read());
-    char wiperVal = (char)(wipers.read());
+	//TODO
+    char hornVal = 0;
+	//TODO
+    hazardsVal = 0;
+	//TODO - change later for D3 and D4
+    char turnLeft = 0;
+    char turnRight = 0;
+	//TODO
+    char wiperVal = 0;
 
 	// hazards on == both blinkers turned on at the same time
     if (hazardsVal) {
@@ -162,7 +174,8 @@ void handle_motor_inputs(){
 	if (duration_cast<milliseconds>(timerMotor.elapsed_time()).count() > MOTOR_CONTROLLER_TRANSMIT_INTERVAL) {
 
 		dmsVal = getDmsVal();
-		ignitionVal = (char)ignition.read();
+		//TODO - change for D6
+		ignitionVal = 0;
 		brakeVal = (char)!brake.read();
 
 		throttle_t currentThrottle = get_throttle_val();
@@ -226,7 +239,8 @@ void receive_can() {
 }
 
 void handleTime() {
-	char thisGesture = ignition.read();
+	//TODO - change for D6
+	char thisGesture = 0;
 	int64_t currentTime = duration_cast<milliseconds>(clockResetTimer.elapsed_time()).count();
 
 	// update timeVal
