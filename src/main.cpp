@@ -32,6 +32,7 @@ using namespace std::chrono;
 #define OFFSET MAX_THROTTLE_OUTPUT - (SLOPE * MAX_THROTTLE_INPUT)
 
 SPI_TFT_ILI9341 TFT(D11, D12, D13, D9, D0, A4);
+DigitalOut sdCs(A0);
 CAN can(D10, D2, 500000);
 SteeringDisplay display(&TFT);
 // BufferedSerial pc(USBTX, USBRX); // tx, rx
@@ -105,6 +106,7 @@ int main() {
 	shift_clk.write(0);
 	led_out.write(0);
 	shiftLatch.write(0);
+	sdCs.write(1);
 
 	// Initalize Accessories--it's impossible for left and right blinker to be on simultaneously so this will cause can update to be sent on boot
 	prevAccVal = 0xFF;
