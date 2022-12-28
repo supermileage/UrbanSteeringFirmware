@@ -34,7 +34,7 @@ SPI_TFT_ILI9341 TFT(D11, D12, D13, D9, D0, A4);
 DigitalOut sdCs(A0);
 CAN can(D10, D2, 500000);
 SteeringDisplay display(&TFT);
-BufferedSerial pc(USBTX, USBRX); // tx, rx
+// BufferedSerial pc(USBTX, USBRX); // tx, rx
 
 // Accessories
 DigitalIn brake(D1,PullUp);
@@ -218,8 +218,6 @@ data_t getDmsVal() {
 	wait_us(40);
     float dms_val = dms.read();
 	dmsLed.write(0);
-
-	printf("DMS Ctrl: 0.%03d - DMS Val: 0.%03d\n", (int)(dms_ctrl*1000), (int)(dms_val*1000));
 
     return (data_t)(dms_val > dms_ctrl + DMS_DELTA);
 }
