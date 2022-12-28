@@ -17,8 +17,7 @@ using namespace std::chrono;
 
 #define DEBUG_THROTTLE 0
 
-#define DMS_THRESH 	0.6f
-#define DMS_DELTA 	0.1f
+#define DMS_DELTA 	0.003f
 #define ACCESSORIES_TRANSMIT_INTERVAL 50
 #define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 50
 
@@ -35,7 +34,7 @@ SPI_TFT_ILI9341 TFT(D11, D12, D13, D9, D0, A4);
 DigitalOut sdCs(A0);
 CAN can(D10, D2, 500000);
 SteeringDisplay display(&TFT);
-// BufferedSerial pc(USBTX, USBRX); // tx, rx
+BufferedSerial pc(USBTX, USBRX); // tx, rx
 
 // Accessories
 DigitalIn brake(D1,PullUp);
@@ -116,7 +115,7 @@ int main() {
 	Thread display_thread;
 	display_thread.start(runSteeringDisplay);
 	
-	dmsLed.write(1);
+	dmsLed.write(0);
 
 	while (1) {
 		handleTime();
@@ -215,12 +214,14 @@ throttle_t get_throttle_val() {
 
 data_t getDmsVal() {
 	float dms_ctrl = dms.read();
-	dmsLed.write(0);
+	dmsLed.write(1);
 	wait_us(40);
     float dms_val = dms.read();
-	dmsLed.write(1);
+	dmsLed.write(0);
 
-    return (data_t)(dms_val <= DMS_THRESH && (dms_val < dms_ctrl - DMS_DELTA));
+	printf("DMS Ctrl: 0.%03d - DMS Val: 0.%03d\n", (int)(dms_ctrl*1000), (int)(dms_val*1000));
+
+    return (data_t)(dms_val > dms_ctrl + DMS_DELTA);
 }
 
 // Checks for gps speed / bms data updates from telemetry
