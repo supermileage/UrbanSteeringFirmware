@@ -25,31 +25,7 @@ class SharedProperty {
 			}
 		}
 
-		T operator=(T other) {
-			setValue(other);
-			return _value;
-		}
-
-		SharedProperty<T>& operator=(SharedProperty<T>& other) {
-			T val = other.getValue();
-			setValue(val);
-			return *this;
-		}
-
-		friend std::ostream& operator<<(std::ostream& os, SharedProperty<T>& property) {
-			os << property.getValue();
-			return os;
-		}
-
-		T operator<<(int32_t shift) {
-			return (T)(_value << shift);
-		}
-
-		T operator!() {
-			return !_value;
-		}
-
-		void setValue(T value) {
+		void set(T value) {
 			_stateMutex.lock();
 			if (value != _value) {
 				_value = value;
@@ -61,7 +37,7 @@ class SharedProperty {
 			}
 		}
 
-		T getValue() {
+		T value() {
 			_stateMutex.lock();
 			T ret = _value;
 			_stateMutex.unlock();
