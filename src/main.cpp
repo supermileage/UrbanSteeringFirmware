@@ -107,13 +107,6 @@ int main() {
 	shiftLatch.write(0);
 	sdCs.write(1);
 
-	//starting by making all outputs of the shift registers 0
-	for(int i = 0; i < 8; i++){
-		shiftClk = 0;
-		ledOut = 0;
-		shiftLatch = 0;
-	}
-
 	// Initalize Accessories--it's impossible for left and right blinker to be on simultaneously so this will cause can update to be sent on boot
 	prevAccVal = 0xFF;
 
