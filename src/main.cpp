@@ -63,9 +63,9 @@ Timer timerFlash;
 SharedProperty<data_t> dmsVal(0);
 SharedProperty<data_t> ignitionVal(0);
 SharedProperty<data_t> brakeVal(0);
-SharedProperty<batt_t> batterySoc(0);
-SharedProperty<batt_t> batteryVoltage(0);
-SharedProperty<speed_t> currentSpeed(0);
+SharedProperty<batt_t> batterySocVal(0);
+SharedProperty<batt_t> batteryVoltageVal(0);
+SharedProperty<speed_t> currentSpeedVal(0);
 SharedProperty<throttle_t> throttleVal(0);
 SharedProperty<data_t> lightsVal(0);
 SharedProperty<data_t> turnLeftVal(0);
@@ -87,9 +87,9 @@ void initializeDisplay() {
 	display.addDynamicGraphicBinding(dmsVal, SteeringDisplay::Dms);
 	display.addDynamicGraphicBinding(ignitionVal, SteeringDisplay::Ignition);
 	display.addDynamicGraphicBinding(brakeVal, SteeringDisplay::Brake);
-	display.addDynamicGraphicBinding(batterySoc, SteeringDisplay::Soc);
-	display.addDynamicGraphicBinding(batteryVoltage, SteeringDisplay::Voltage);
-	display.addDynamicGraphicBinding(currentSpeed, SteeringDisplay::Speed);
+	display.addDynamicGraphicBinding(batterySocVal, SteeringDisplay::Soc);
+	display.addDynamicGraphicBinding(batteryVoltageVal, SteeringDisplay::Voltage);
+	display.addDynamicGraphicBinding(currentSpeedVal, SteeringDisplay::Speed);
 	display.addDynamicGraphicBinding(throttleVal, SteeringDisplay::Power);
 	display.addDynamicGraphicBinding(lightsVal, SteeringDisplay::Lights);
 	display.addDynamicGraphicBinding(turnLeftVal, SteeringDisplay::LeftSignal);
@@ -108,7 +108,7 @@ int main() {
 	sdCs.write(1);
 
 	// Initalize Accessories--it's impossible for left and right blinker to be on simultaneously so this will cause can update to be sent on boot
-	prevAccVal = 0xFF;
+	prevAccVal.set(0xFF);
 
 	initializeDisplay();
 
@@ -128,30 +128,30 @@ int main() {
 void handle_accessories() {
 	if (duration_cast<milliseconds>(timerAccessories.elapsed_time()).count() > ACCESSORIES_TRANSMIT_INTERVAL) {
 		char hazardsOn;
-		char currentAccVal = read_accessory_inputs(hazardsOn);
-		if ((prevAccVal.getValue() != currentAccVal)) {
+		char currentAcc = read_accessory_inputs(hazardsOn);
+		if ((prevAccVal.value() != currentAcc)) {
 			// turn hazards off
 			if (hazardsOn) {
 				const unsigned char data[] = { 0x2, 0x4 << 1, 0x5 << 1 };
 				can.write(CANMessage(CAN_ACC_OPERATION, data, 3));
 				wait_us(1000);
 			}
-			const char data[] = {0, currentAccVal};
+			const char data[] = {0, currentAcc};
 			can.write(CANMessage(CAN_ACC_OPERATION, data, 2));
-			prevAccVal = currentAccVal;
+			prevAccVal.set(currentAcc);
 		}
 		timerAccessories.reset();
 	}
 }
 
-char read_accessory_inputs(char& hazardsVal){
+char read_accessory_inputs(char& hazards){
     //TODO
-	lightsVal = 0;
-	char brakeVal = (char)(!brake.read());
+	lightsVal.set(0);
+	char currentBrake = (char)(!brake.read());
 	//TODO
-    char hornVal = 0;
+    char horn = 0;
 	//TODO
-    hazardsVal = 0;
+    hazards = 0;
 	//TODO - change later for D3 and D4
     char turnLeft = 0;
     char turnRight = 0;
@@ -159,41 +159,42 @@ char read_accessory_inputs(char& hazardsVal){
     char wiperVal = 0;
 
 	// hazards on == both blinkers turned on at the same time
-    if (hazardsVal) {
-		turnLeftVal = 1;
-        turnRightVal = 1;
+    if (hazards) {
+		turnLeftVal.set(1);
+        turnRightVal.set(1);
     } else {
-		turnLeftVal = turnLeft;
-		turnRightVal = turnRight;
+		turnLeftVal.set(turnLeft);
+		turnRightVal.set(turnRight);
 	}
 
-    char dataStr = (wiperVal << 6) | (turnLeftVal << 5) | (turnRightVal << 4) | (hazardsVal << 3) | (hornVal << 2) | (brakeVal << 1) | lightsVal.getValue();
+    char dataStr = (wiperVal << 6) | (turnLeftVal.value() << 5) | (turnRightVal.value() << 4) |
+		(hazards << 3) |(horn << 2) | (currentBrake << 1) | lightsVal.value();
     return dataStr;
 }
 
 void handle_motor_inputs(){
 	if (duration_cast<milliseconds>(timerMotor.elapsed_time()).count() > MOTOR_CONTROLLER_TRANSMIT_INTERVAL) {
 
-		dmsVal = getDmsVal();
+		dmsVal.set(getDmsVal());
 		//TODO - change for D6
-		ignitionVal = 0;
-		brakeVal = (char)!brake.read();
+		ignitionVal.set(0);
+		brakeVal.set((char)!brake.read());
 
 		throttle_t currentThrottle = get_throttle_val();
 		
-		if (!dmsVal.getValue() || !ignitionVal.getValue() || brakeVal.getValue()) {
+		if (!dmsVal.value() || !ignitionVal.value() || brakeVal.value()) {
 			currentThrottle = 0;
 		}
 
-		throttleVal = currentThrottle;
+		throttleVal.set(currentThrottle);
 
 		// Throttle Data
-		const throttle_t throttleData[] = { throttleVal.getValue() };
+		const throttle_t throttleData[] = { throttleVal.value() };
 		can.write(CANMessage(CAN_STEERING_THROTTLE, throttleData, 1));
 
 		// Ready Data
-		char readyVal = (brakeVal << 2) | (dmsVal << 1) | ignitionVal.getValue();
-		const char readyData[] = { readyVal };
+		char ready = (brakeVal.value() << 2) | (dmsVal.value() << 1) | ignitionVal.value();
+		const char readyData[] = { ready };
 		can.write(CANMessage(CAN_STEERING_READY, readyData, 1));
 
         timerMotor.reset();
@@ -228,13 +229,13 @@ void receive_can() {
 
 	if (can.read(msg)) {
 		if (msg.id == CAN_TELEMETRY_GPS_DATA) {
-			currentSpeed = (unsigned)msg.data[0];
+			currentSpeedVal.set((speed_t)msg.data[0]);
 		} else if (msg.id == CAN_TELEMETRY_BMS_DATA) {
-			float soc, voltage;
+			batt_t soc, voltage;
 			memcpy((void*)&soc, (void*)msg.data, 4);
 			memcpy((void*)&voltage, (void*)(msg.data + 4), 4);
-			batterySoc = soc;
-			batteryVoltage = voltage;
+			batterySocVal.set(soc);
+			batteryVoltageVal.set(voltage);
 		}
 	}
 }
@@ -256,7 +257,7 @@ void handleTime() {
 		}
 	}
 	
-	timeVal = steering_time_t { (int)currentTime / 1000 / 60, (int)currentTime / 1000 % 60 };
+	timeVal.set(steering_time_t { (int)currentTime / 1000 / 60, (int)currentTime / 1000 % 60 });
 	g_lastGesture = thisGesture;
 }
 
