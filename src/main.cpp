@@ -45,8 +45,8 @@ AnalogIn throttle(A6);
 DigitalOut dmsLed(A5);
 
 //shift registers
-DigitalOut shift_clk(D3);
-DigitalOut led_out(D4);
+DigitalOut shiftClk(D3);
+DigitalOut ledOut(D4);
 DigitalOut shiftLatch(D5);
 DigitalIn buttonIn(D6);
 
@@ -102,10 +102,17 @@ int main() {
 	clockResetTimer.start();
 	timerAccessories.start();
 
-	shift_clk.write(0);
-	led_out.write(0);
+	shiftClk.write(0);
+	ledOut.write(0);
 	shiftLatch.write(0);
 	sdCs.write(1);
+
+	//starting by making all outputs of the shift registers 0
+	for(int i = 0; i < 8; i++){
+		shiftClk = 0;
+		ledOut = 0;
+		shiftLatch = 0;
+	}
 
 	// Initalize Accessories--it's impossible for left and right blinker to be on simultaneously so this will cause can update to be sent on boot
 	prevAccVal = 0xFF;
@@ -122,6 +129,10 @@ int main() {
 		handle_accessories();
 		handle_motor_inputs();
 		receive_can();
+		//CHANGE MADE
+		shiftReg(buttonIn.read());
+		//reading buttons
+		//int buttonPress = buttonIn.read();
 	}
 }
 
@@ -263,5 +274,21 @@ void handleTime() {
 void runSteeringDisplay() {
 	while (1) {
 		display.run();
+	}
+}
+
+void shiftReg(int buttonPress){
+	for(int i = 0; i <8; i++){
+		shiftClk = 1;
+
+		if(buttonPress == 1) ledOut = 1;
+		else if(buttonPress == 0) ledOut = 0;
+		wait_us(20);
+
+		shiftClk = 0;
+		shiftLatch = 1;
+		wait_us(20);
+
+		shiftLatch = 0;
 	}
 }
