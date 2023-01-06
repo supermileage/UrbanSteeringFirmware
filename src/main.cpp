@@ -122,8 +122,9 @@ int main() {
 		handle_accessories();
 		handle_motor_inputs();
 		receive_can();
+		buttonRead();
 		//CHANGE MADE
-		shiftReg(buttonIn.read());
+		//shiftReg(buttonIn.read());
 		//reading buttons
 		//int buttonPress = buttonIn.read();
 	}
@@ -270,7 +271,7 @@ void runSteeringDisplay() {
 	}
 }
 
-void shiftReg(int buttonPress){
+/*void shiftReg(int buttonPress){
 	for(int i = 0; i <8; i++){
 		shiftClk = 1;
 
@@ -283,5 +284,60 @@ void shiftReg(int buttonPress){
 		wait_us(20);
 
 		shiftLatch = 0;
+	}
+}*/
+
+void buttonRead(){
+	int ledPos;
+	for(int i = 0; i <8; i++){
+		shiftClk = 1;
+		wait_us(20);
+		shiftClk = 0;
+		shiftLatch = 1;
+		wait_us(20);
+		shiftLatch = 0;
+
+		if(i == 3 && buttonIn.read() == 1){
+			ledPos = 1;
+			ledOn(ledPos);
+		}
+
+		else if(i == 4 && buttonIn.read() == 1){
+			ledPos = 2;
+			ledOn(ledPos);
+		}
+
+		else if(i == 5 && buttonIn.read() == 1){
+			ledPos = 3;
+			ledOn(ledPos);
+		}
+
+		else if(i == 6 && buttonIn.read() == 0){
+			ledPos = 4;
+			ledOn(ledPos);
+		}
+
+		else if(i == 6 && buttonIn.read() == 1){
+			ledPos = 5;
+			ledOn(ledPos);
+		}
+
+		else if(i == 7 && buttonIn.read() == 1){
+			ledPos = 6;
+			ledOn(ledPos);
+		}
+	}
+}
+
+void ledOn(int ledPos){
+	for(int i = 0; i < 8; i++){
+		shiftClk = 1;
+		wait_us(20);
+		shiftClk = 0;
+		shiftLatch = 1;
+		wait_us(20);
+		shiftLatch = 0;
+
+		if(i == ledPos) ledOut = 1;
 	}
 }
