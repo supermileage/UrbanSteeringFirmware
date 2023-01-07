@@ -59,8 +59,12 @@ void initializeDisplay();
  */
 void handleTime();
 
-void buttonRead();
+void buttonRead(int buttonPress);
 
 void ledOn(int ledPos);
+
+void buttonTest(int buttonPress);
+
+void buttonState();
 
 #endif

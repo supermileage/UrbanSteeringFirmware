@@ -50,6 +50,10 @@ DigitalOut ledOut(D4);
 DigitalOut shiftLatch(D5);
 DigitalIn buttonIn(D6);
 
+//CHANGES- shift reg
+uint8_t buttons = 0;
+uint8_t leds = 0;
+
 //Joystick
 AnalogIn joyX(A3);
 AnalogIn joyY(A2);
@@ -103,7 +107,7 @@ int main() {
 	timerAccessories.start();
 
 	shiftClk.write(0);
-	ledOut.write(0);
+	//ledOut.write(0);
 	shiftLatch.write(0);
 	sdCs.write(1);
 
@@ -122,11 +126,11 @@ int main() {
 		handle_accessories();
 		handle_motor_inputs();
 		receive_can();
-		buttonRead();
+		buttonState();
+		//buttonRead(buttonPress);
 		//CHANGE MADE
 		//shiftReg(buttonIn.read());
 		//reading buttons
-		//int buttonPress = buttonIn.read();
 	}
 }
 
@@ -271,61 +275,46 @@ void runSteeringDisplay() {
 	}
 }
 
-/*void shiftReg(int buttonPress){
-	for(int i = 0; i <8; i++){
-		shiftClk = 1;
-
-		if(buttonPress == 1) ledOut = 1;
-		else if(buttonPress == 0) ledOut = 0;
-		wait_us(20);
-
-		shiftClk = 0;
-		shiftLatch = 1;
-		wait_us(20);
-
-		shiftLatch = 0;
-	}
-}*/
-
-void buttonRead(){
+void buttonRead(int buttonPress){
 	int ledPos;
 	for(int i = 0; i <8; i++){
 		shiftClk = 1;
 		wait_us(20);
 		shiftClk = 0;
 		shiftLatch = 1;
-		wait_us(20);
-		shiftLatch = 0;
 
-		if(i == 3 && buttonIn.read() == 1){
+		if(i == 3 && buttonPress == 1){
 			ledPos = 1;
 			ledOn(ledPos);
 		}
 
-		else if(i == 4 && buttonIn.read() == 1){
+		else if(i == 4 && buttonPress == 1){
 			ledPos = 2;
 			ledOn(ledPos);
 		}
 
-		else if(i == 5 && buttonIn.read() == 1){
+		else if(i == 5 && buttonPress == 1){
 			ledPos = 3;
 			ledOn(ledPos);
 		}
 
-		else if(i == 6 && buttonIn.read() == 0){
+		else if(i == 6 && buttonPress == 0){
 			ledPos = 4;
 			ledOn(ledPos);
 		}
 
-		else if(i == 6 && buttonIn.read() == 1){
+		else if(i == 6 && buttonPress == 1){
 			ledPos = 5;
 			ledOn(ledPos);
 		}
 
-		else if(i == 7 && buttonIn.read() == 1){
+		else if(i == 7 && buttonPress == 1){
 			ledPos = 6;
 			ledOn(ledPos);
 		}
+
+		wait_us(20);
+		shiftLatch = 0;
 	}
 }
 
@@ -340,4 +329,30 @@ void ledOn(int ledPos){
 
 		if(i == ledPos) ledOut = 1;
 	}
+}
+
+void buttonTest(int buttonPress){
+	shiftClk = 1;
+	shiftLatch = 0;
+	if(buttonPress == 1) ledOut.write(1);
+}
+
+void buttonState(){
+	shiftClk = 0;
+
+	buttons = (buttons << 1) | buttonIn.read();
+
+	leds = (buttons & 0x01) ? (leds | 0x01) : (leds & 0xFF);
+
+	ledOut = leds;
+
+	shiftClk = 1;
+	wait_us(10);
+	shiftClk = 0;
+
+	shiftLatch = 1;
+	wait_us(10);
+	shiftLatch = 0;
+
+	printf("Button state: %d\n", buttons);
 }
