@@ -5,15 +5,15 @@
 #include "Rectangle.h"
 
 #define BALL_SPEED 7
-#define BALL_RADIUS 15
+#define BALL_RADIUS 10
 
 #define PADDLE_NAME "paddle"
 #define PADDLE_SPEED 15
-#define PADDLE_WIDTH 200
-#define PADDLE_HEIGHT 200
+#define PADDLE_WIDTH 50
+#define PADDLE_HEIGHT 50
 #define PADDLE_START_X WINDOW_WIDTH - PADDLE_WIDTH * 2
 #define PADDLE_START_Y WINDOW_HEIGHT / 2 - PADDLE_HEIGHT / 2
-#define PADDLE_START util::Point { WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 - 100 }
+#define PADDLE_START util::Point { WINDOW_WIDTH / 2 - 25, WINDOW_HEIGHT / 2 - 25 }
 
 /* Declare any global game objects here */
 Rectangle* paddle;

@@ -128,6 +128,8 @@ int main() {
 	// 	receive_can();
 	// }
 
+	TFT.set_orientation(3);
+
 	InputManager inputManager;
     Game game(&TFT, &inputManager);
 

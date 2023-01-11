@@ -10,8 +10,8 @@
 #include "ThreadedQueue.h"
 #include "GameObject.h"
 
-#define WINDOW_WIDTH 1200
-#define WINDOW_HEIGHT 800
+#define WINDOW_WIDTH 320
+#define WINDOW_HEIGHT 240
 #define FRAME_RATE_MILLIS 10
 
 class InputManager;
