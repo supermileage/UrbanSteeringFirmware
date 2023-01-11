@@ -82,6 +82,9 @@ void GameBase::_handleCollision(Collider::Collision collision) {
 }
 
 void GameBase::_runRenderQueue() {
+	if (!_currentGame) {
+		return
+	}
     while (_currentGame->_run) {
         while (!_currentGame->_renderQueue.empty()) {
             _currentGame->_renderQueue.front()->clear();
