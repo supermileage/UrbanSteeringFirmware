@@ -74,4 +74,4 @@ bool TextDisplay::claim (FILE *stream) {
     // make sure we use line buffering
     setvbuf(stdout, NULL, _IOLBF, columns());
     return true;
-} 
+}

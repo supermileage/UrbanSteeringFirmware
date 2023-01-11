@@ -1,7 +1,7 @@
 #include "Text.h"
 
 void Text::init(SPI_TFT_ILI9341* tft, int32_t xpos, int32_t ypos, unsigned char* font, const std::string& defaultString) {
-	Shape::init(tft, xpos, ypos, White);
+	Shape::init(tft, xpos, ypos, WhiteTFT);
 	_font = font;
 	_displayString = defaultString;
 	_defaultString = defaultString;

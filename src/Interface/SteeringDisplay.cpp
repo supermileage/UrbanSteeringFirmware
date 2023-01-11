@@ -88,7 +88,7 @@ SteeringDisplay::SteeringDisplay(SPI_TFT_ILI9341* tft) : _tft(tft) {
 void SteeringDisplay::init() {
 	// initialize tft display
 	_tft->set_orientation(3);
-	_tft->background(Black);
+	_tft->background(BlackTFT);
 	_tft->cls();
 	
 	/* Small Font Graphics */
@@ -97,26 +97,26 @@ void SteeringDisplay::init() {
 	// Dms
 	_tft->locate(DMS_X, STATUS_Y);
 	_tft->printf("DMS");
-	_dmsIcon.init(_tft, DMS_X + CIRCLE_X_OFFSET_DMS, CIRCLE_Y_OFFSET, Red, CIRCLE_RADIUS, true);
+	_dmsIcon.init(_tft, DMS_X + CIRCLE_X_OFFSET_DMS, CIRCLE_Y_OFFSET, RedTFT, CIRCLE_RADIUS, true);
 	_setDynamicGraphic(SteeringDisplay::Dms, &_dmsIcon);
 
 	// Ignition
 	_tft->locate(IGNITION_X, STATUS_Y);
 	_tft->printf("IGN");
-	_ignitionIcon.init(_tft, IGNITION_X + CIRCLE_X_OFFSET_IGNITION, CIRCLE_Y_OFFSET, Red, CIRCLE_RADIUS, true);
+	_ignitionIcon.init(_tft, IGNITION_X + CIRCLE_X_OFFSET_IGNITION, CIRCLE_Y_OFFSET, RedTFT, CIRCLE_RADIUS, true);
 	_setDynamicGraphic(SteeringDisplay::Ignition, &_ignitionIcon);
 
 	// Brake
 	_tft->locate(BRAKE_X, STATUS_Y);
 	_tft->printf("BRK");
-	_brakeIcon.init(_tft, BRAKE_X + CIRCLE_X_OFFSET_BRAKE, CIRCLE_Y_OFFSET, Green, CIRCLE_RADIUS, true);
+	_brakeIcon.init(_tft, BRAKE_X + CIRCLE_X_OFFSET_BRAKE, CIRCLE_Y_OFFSET, GreenTFT, CIRCLE_RADIUS, true);
 	_setDynamicGraphic(SteeringDisplay::Brake, &_brakeIcon);
 
 	// Battery icon w/ static outline graphic
-	_tft->rect(BATTERY_LEFT_X, BATTERY_LEFT_Y, BATTERY_LEFT_X + BATTERY_WIDTH, BATTERY_LEFT_Y + BATTERY_HEIGHT, White);
-	_tft->rect(BATTERY_BTN_X, BATTERY_BTN_Y, BATTERY_BTN_X + BATTERY_BTN_WIDTH, BATTERY_BTN_Y + BATTERY_BTN_HEIGHT, White);
+	_tft->rect(BATTERY_LEFT_X, BATTERY_LEFT_Y, BATTERY_LEFT_X + BATTERY_WIDTH, BATTERY_LEFT_Y + BATTERY_HEIGHT, WhiteTFT);
+	_tft->rect(BATTERY_BTN_X, BATTERY_BTN_Y, BATTERY_BTN_X + BATTERY_BTN_WIDTH, BATTERY_BTN_Y + BATTERY_BTN_HEIGHT, WhiteTFT);
 	_batteryIcon.init(_tft, BATTERY_LEFT_X + BATTERY_PADDING, BATTERY_LEFT_Y + BATTERY_PADDING,
-		Green, BATTERY_RIGHT_X - BATTERY_PADDING, BATTERY_RIGHT_Y - BATTERY_PADDING, true);
+		GreenTFT, BATTERY_RIGHT_X - BATTERY_PADDING, BATTERY_RIGHT_Y - BATTERY_PADDING, true);
 	_setDynamicGraphic(SteeringDisplay::Battery, &_batteryIcon);
 	// Battery Soc
 	_initializeDynamicText(&_batterySocText, SteeringDisplay::Soc, BATTERY_TEXT_X, SOC_TEXT_Y, (unsigned char*)SMALL_FONT, "00.0 %%");
@@ -314,7 +314,7 @@ void SteeringDisplay::_onTimeChanged(const steering_time_t value) {
 
 void SteeringDisplay::_updateCircleIcon(DynamicGraphicId id, data_t value) {
 	auto& circle = _dynamicGraphics[id];
-	circle->setColour(int32_t(value ? Green : Red));
+	circle->setColour(int32_t(value ? GreenTFT : RedTFT));
 	_redrawActionQueue.push(RedrawAction { circle, &Shape::draw });
 }
 

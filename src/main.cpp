@@ -12,6 +12,10 @@
 #include "SteeringDisplay.h"
 #include "main.h"
 
+// Game
+#include "Game.h"
+#include "InputManager.h" 
+
 using namespace std;
 using namespace std::chrono;
 
@@ -98,31 +102,37 @@ void initializeDisplay() {
 }
 
 int main() {
-	timerMotor.start();
-	clockResetTimer.start();
-	timerAccessories.start();
+	// timerMotor.start();
+	// clockResetTimer.start();
+	// timerAccessories.start();
 
-	shift_clk.write(0);
-	led_out.write(0);
-	shiftLatch.write(0);
-	sdCs.write(1);
+	// shift_clk.write(0);
+	// led_out.write(0);
+	// shiftLatch.write(0);
+	// sdCs.write(1);
 
-	// Initalize Accessories--it's impossible for left and right blinker to be on simultaneously so this will cause can update to be sent on boot
-	prevAccVal = 0xFF;
+	// // Initalize Accessories--it's impossible for left and right blinker to be on simultaneously so this will cause can update to be sent on boot
+	// prevAccVal = 0xFF;
 
-	initializeDisplay();
+	// initializeDisplay();
 
-	Thread display_thread;
-	display_thread.start(runSteeringDisplay);
+	// Thread display_thread;
+	// display_thread.start(runSteeringDisplay);
 	
-	dmsLed.write(0);
+	// dmsLed.write(0);
 
-	while (1) {
-		handleTime();
-		handle_accessories();
-		handle_motor_inputs();
-		receive_can();
-	}
+	// while (1) {
+	// 	handleTime();
+	// 	handle_accessories();
+	// 	handle_motor_inputs();
+	// 	receive_can();
+	// }
+
+	InputManager inputManager;
+    Game game(&TFT, &inputManager);
+
+    game.init();
+    int status = game.run();
 }
 
 void handle_accessories() {

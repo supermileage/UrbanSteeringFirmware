@@ -1,10 +1,23 @@
 #include "Rectangle.h"
+#include "RectangleCollider.h"
 
-void Rectangle::init(SPI_TFT_ILI9341* tft, int32_t xpos1, int32_t ypos1, int32_t colour, int32_t xpos2, int32_t ypos2, bool fill) {
-	Shape::init(tft, xpos1, ypos1, colour);
-	_x2 = xpos2;
-	_y2 = ypos2;
+Rectangle::Rectangle(std::string name, bool enableCollisions) : GameObject(name, enableCollisions) { }
+
+void Rectangle::init(SPI_TFT_ILI9341* tft, int32_t x1, int32_t y1, int32_t colour, int32_t x2, int32_t y2, bool fill) {
+	Shape::init(tft, x1, y1, colour);
+	_x2 = x2;
+	_y2 = y2;
+	_width = x2 - x1;
+	_height = y2 - y1;
 	_fill = fill;
+
+	if (_enableCollisions) {
+		_collider = new RectangleCollider(this, x2 - x1, y2 - y1);
+	}
+}
+
+void Rectangle::init(SPI_TFT_ILI9341* tft, util::Point topLeft, int32_t width, int32_t height, int32_t colour, bool fill) {
+	init(tft, topLeft.x, topLeft.y, colour, topLeft.x + width, topLeft.y + height, fill);
 }
 
 void Rectangle::draw() {
@@ -16,4 +29,31 @@ void Rectangle::draw() {
 
 void Rectangle::clear() {
 	_tft->fillrect(_x, _y, _x2, _y2, _background);
+}
+
+bool Rectangle::move() {
+	float deltaX = _speed * _direction.x + _lastDeltaX;
+    float deltaY = _speed * _direction.y + _lastDeltaY;
+    float roundedX = round(deltaX);
+    float roundedY = round(deltaY);
+
+    _lastDeltaX = (roundedX == 0.0f ? deltaX : 0);
+    _lastDeltaY = (roundedY == 0.0f ? deltaY : 0);
+    _x += roundedX;
+    _y += roundedY;
+	_x2 += roundedX;
+    _y2 += roundedY;
+    
+    if (roundedX != 0 || roundedY != 0) {
+        return true;
+    }
+    return false;
+}
+
+int32_t Rectangle::getWidth() {
+	return _width;
+}
+
+int32_t Rectangle::getHeight() {
+	return _height;
 }
