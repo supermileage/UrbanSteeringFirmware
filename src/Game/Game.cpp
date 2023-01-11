@@ -36,22 +36,22 @@ void Game::setup() {
     draw(paddle);
 
     ball1 = new Circle("ball1", true);
-    ball1->init(_tft, _tft->width() / 2 - 200, _tft->height() / 2, BlueTFT, BALL_RADIUS + 10, true);
-    ball1->setDirection(Vec2 { -2.5, -1 });
+    ball1->init(_tft, 60, _tft->height() - 50, BlueTFT, BALL_RADIUS + 10, true);
+    ball1->setDirection(Vec2 { 1.7, -1 });
     ball1->setSpeed(BALL_SPEED - 5);
     balls.push_back(ball1);
     draw(ball1);
 
     ball2 = new Circle("ball2", true);
-    ball2->init(_tft, _tft->width() - BALL_RADIUS, _tft->height() / 2, YellowTFT, BALL_RADIUS, true);
-    ball2->setDirection(Vec2 { 1, -1 });
+    ball2->init(_tft, BALL_RADIUS + 10, BALL_RADIUS + 10, YellowTFT, BALL_RADIUS, true);
+    ball2->setDirection(Vec2 { 1, 1 });
     ball2->setSpeed(BALL_SPEED + 3);
     balls.push_back(ball2);
     draw(ball2);
 
     ball3 = new Circle("ball3", true);
-    ball3->init(_tft, BALL_RADIUS, _tft->height() - 200, GreenTFT, BALL_RADIUS + 20, true);
-    ball3->setDirection(Vec2 { -1, 1.5 });
+    ball3->init(_tft, _tft->width() - 50, 50, GreenTFT, BALL_RADIUS + 20, true);
+    ball3->setDirection(Vec2 { -1, -1.5 });
     ball3->setSpeed(BALL_SPEED + 2);
     balls.push_back(ball3);
     draw(ball3);
