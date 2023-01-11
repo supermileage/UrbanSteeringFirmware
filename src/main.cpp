@@ -132,7 +132,7 @@ int main() {
     Game game(&TFT, &inputManager);
 
     game.init();
-    int status = game.run();
+    game.run();
 }
 
 void handle_accessories() {
