@@ -12,7 +12,9 @@
 
 #define WINDOW_WIDTH 320
 #define WINDOW_HEIGHT 240
-#define FRAME_RATE_MILLIS 10
+#define FRAME_RATE_MILLIS 100
+
+#define BORDER 3
 
 class InputManager;
 

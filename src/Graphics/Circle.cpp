@@ -14,6 +14,8 @@ void Circle::init(SPI_TFT_ILI9341* tft, int32_t xpos, int32_t ypos, int32_t colo
 }
 
 void Circle::draw() {
+	_onDraw();
+	
 	if (_fill)
 		_tft->fillcircle(_x, _y, _radius, _colour);
 	else
@@ -21,7 +23,12 @@ void Circle::draw() {
 }
 
 void Circle::clear() {
-	_tft->fillcircle(_x, _y, _radius, _background);
+	if (_rendered) {
+		int x = _lastRenderPosition.x;
+		int y = _lastRenderPosition.y;
+		_tft->fillcircle(x, y, _radius, _background);
+		_rendered = false;
+	}
 }
 
 void Circle::setRadius(int32_t r) {

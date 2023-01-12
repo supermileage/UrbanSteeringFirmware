@@ -21,6 +21,8 @@ void Rectangle::init(SPI_TFT_ILI9341* tft, util::Point topLeft, int32_t width, i
 }
 
 void Rectangle::draw() {
+	_onDraw();
+	
 	if (_fill)
 		_tft->fillrect(_x, _y, _x2, _y2, _colour);
 	else
@@ -28,7 +30,12 @@ void Rectangle::draw() {
 }
 
 void Rectangle::clear() {
-	_tft->fillrect(_x, _y, _x2, _y2, _background);
+	if (_rendered) {
+		int x = _lastRenderPosition.x;
+		int y = _lastRenderPosition.y;
+		_tft->fillrect(x, y, x + _width, y + _height, _background);
+		_rendered = false;
+	}
 }
 
 bool Rectangle::move() {

@@ -39,7 +39,11 @@ class GameObject : public Shape {
         float _lastDeltaX = 0;
         float _lastDeltaY = 0;
         Collider* _collider = nullptr;
+        util::Point _lastRenderPosition;
         bool _enableCollisions;
+        bool _rendered = false;
+
+        void _onDraw();
 };
 
 #endif
