@@ -34,7 +34,7 @@ SPI_TFT_ILI9341 TFT(D11, D12, D13, D9, D0, A4);
 DigitalOut sdCs(A0);
 CAN can(D10, D2, 500000);
 SteeringDisplay display(&TFT);
-// BufferedSerial pc(USBTX, USBRX); // tx, rx
+BufferedSerial pc(USBTX, USBRX); // Uncomment to turn on serial monitor
 
 // Accessories
 DigitalIn brake(D1,PullUp);
@@ -62,6 +62,8 @@ Timer timerMotor;
 Timer clockResetTimer;
 Timer timerAccessories;
 Timer timerFlash;
+
+Ticker ledTest;
 
 // Properties to bind to steering GUI and CAN events
 SharedProperty<data_t> dmsVal(0);
@@ -101,10 +103,18 @@ void initializeDisplay() {
 	display.addDynamicGraphicBinding(timeVal, SteeringDisplay::Minutes);
 }
 
+char currentLed = 1;
+void setLed() {
+	if(currentLed == 6) currentLed = 1;
+	else currentLed++;
+	ledOn(currentLed);
+}
+
 int main() {
 	timerMotor.start();
 	clockResetTimer.start();
 	timerAccessories.start();
+	ledTest.attach(&setLed, 1.0);
 
 	shiftClk.write(0);
 	//ledOut.write(0);
@@ -126,7 +136,7 @@ int main() {
 		handle_accessories();
 		handle_motor_inputs();
 		receive_can();
-		buttonState();
+		//buttonState();
 		//buttonRead(buttonPress);
 		//CHANGE MADE
 		//shiftReg(buttonIn.read());
@@ -318,17 +328,35 @@ void buttonRead(int buttonPress){
 	}
 }
 
-void ledOn(int ledPos){
-	for(int i = 0; i < 8; i++){
-		shiftClk = 1;
-		wait_us(20);
-		shiftClk = 0;
-		shiftLatch = 1;
-		wait_us(20);
-		shiftLatch = 0;
+void setLeds() {
+	// Set all LEDs
+}
 
-		if(i == ledPos) ledOut = 1;
+uint8_t updateButtons() {
+	// Return state of all buttons
+	return 0;
+}
+
+void setLedsToButtons() {
+	// Set LED state to buttons
+}
+
+void updateShiftRegs() {
+	// Update button status and output LED status at the same time
+}
+
+void ledOn(int ledPos){
+	shiftLatch.write(0);
+	for(int i = 0; i < 8; i++){
+		if(ledPos == i){
+			ledOut.write(0);
+		} else {
+			ledOut.write(1);
+		}
+		shiftClk.write(1);
+		shiftClk.write(0);
 	}
+	shiftLatch.write(1);
 }
 
 void buttonTest(int buttonPress){
