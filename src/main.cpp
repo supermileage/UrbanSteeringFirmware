@@ -63,7 +63,7 @@ Timer clockResetTimer;
 Timer timerAccessories;
 Timer timerFlash;
 
-Ticker ledTest;
+//Ticker ledTest;
 
 // Properties to bind to steering GUI and CAN events
 SharedProperty<data_t> dmsVal(0);
@@ -114,10 +114,10 @@ int main() {
 	timerMotor.start();
 	clockResetTimer.start();
 	timerAccessories.start();
-	ledTest.attach(&setLed, 1.0);
+	//ledTest.attach(&setLed, 1.0);
 
 	shiftClk.write(0);
-	//ledOut.write(0);
+	ledOut.write(0);
 	shiftLatch.write(0);
 	sdCs.write(1);
 
@@ -136,6 +136,10 @@ int main() {
 		handle_accessories();
 		handle_motor_inputs();
 		receive_can();
+		setLeds();
+		updateButtons();
+//		int buttonPress = buttonIn.read();
+//		setLedsToButtons(buttonPress);
 		//buttonState();
 		//buttonRead(buttonPress);
 		//CHANGE MADE
@@ -287,12 +291,8 @@ void runSteeringDisplay() {
 
 void buttonRead(int buttonPress){
 	int ledPos;
+	shiftLatch.write(0);
 	for(int i = 0; i <8; i++){
-		shiftClk = 1;
-		wait_us(20);
-		shiftClk = 0;
-		shiftLatch = 1;
-
 		if(i == 3 && buttonPress == 1){
 			ledPos = 1;
 			ledOn(ledPos);
@@ -322,23 +322,38 @@ void buttonRead(int buttonPress){
 			ledPos = 6;
 			ledOn(ledPos);
 		}
-
-		wait_us(20);
-		shiftLatch = 0;
+		shiftClk.write(1);
+		shiftClk.write(0);
 	}
+	shiftLatch.write(1);
 }
 
 void setLeds() {
 	// Set all LEDs
+	shiftLatch.write(0);
+	for(int i = 0; i < 8; i++){
+		ledOut.write(0);
+		shiftClk.write(1);
+		shiftClk.write(0);
+	}
+	shiftLatch.write(1);
 }
 
 uint8_t updateButtons() {
 	// Return state of all buttons
-	return 0;
+	shiftLatch.write(0);
+	buttons = (buttons << 1) | buttonIn.read();
+	shiftClk.write(1);
+	shiftClk.write(0);
+	shiftLatch.write(1);
+	//printf("Button state: %d\n", buttons);
+	print_buttons_bitwise(buttons);
+	return buttons;
 }
 
-void setLedsToButtons() {
+void setLedsToButtons(int buttonPress) {
 	// Set LED state to buttons
+
 }
 
 void updateShiftRegs() {
@@ -383,4 +398,11 @@ void buttonState(){
 	shiftLatch = 0;
 
 	printf("Button state: %d\n", buttons);
+}
+
+void print_buttons_bitwise(uint8_t buttons) {
+    for (int i = 7; i >= 0; i--) {
+        printf("%d", (buttons >> i) & 1);
+    }
+    printf("\n");
 }

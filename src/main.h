@@ -67,4 +67,12 @@ void buttonTest(int buttonPress);
 
 void buttonState();
 
+void setLeds();
+
+uint8_t updateButtons();
+
+void print_buttons_bitwise(uint8_t buttons);
+
+void setLedsToButtons(int buttonPress);
+
 #endif
