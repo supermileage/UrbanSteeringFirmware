@@ -136,7 +136,7 @@ int main() {
 		handle_accessories();
 		handle_motor_inputs();
 		receive_can();
-		setLeds();
+		// setLeds();
 		updateButtons();
 //		int buttonPress = buttonIn.read();
 //		setLedsToButtons(buttonPress);
@@ -303,14 +303,13 @@ void setLeds() {
 
 uint8_t updateButtons() {
 	// Return state of all buttons
-	shiftLatch.write(0);
+	shiftLatch.write(1);
 	for(int i =0; i < 8; i++){
 		buttons = (buttons << 1) | buttonIn.read();
 		shiftClk.write(1);
 		shiftClk.write(0);
 	}
-	shiftLatch.write(1);
-	//printf("Button state: %d\n", buttons);
+	shiftLatch.write(0);
 	print_buttons_bitwise(buttons);
 	return buttons;
 }
