@@ -130,14 +130,17 @@ int main() {
 	display_thread.start(runSteeringDisplay);
 	
 	dmsLed.write(0);
+//	ledOn(6);
 
 	while (1) {
 		handleTime();
 		handle_accessories();
 		handle_motor_inputs();
 		receive_can();
+//		ledOn(3);
 		// setLeds();
 		updateButtons();
+//		setLedsToButtons();
 //		int buttonPress = buttonIn.read();
 //		setLedsToButtons(buttonPress);
 		//buttonState();
@@ -307,16 +310,30 @@ uint8_t updateButtons() {
 	for(int i =0; i < 8; i++){
 		buttons = (buttons << 1) | buttonIn.read();
 		shiftClk.write(1);
+		wait_us(1000);
 		shiftClk.write(0);
+		wait_us(1000);
 	}
 	shiftLatch.write(0);
 	print_buttons_bitwise(buttons);
+
+	for(int i = 0; i < 8; i++) {
+		if((buttons >> i) & 1) {
+			ledOn(i);
+		}
+	}
 	return buttons;
 }
 
-void setLedsToButtons(int buttonPress) {
+void setLedsToButtons() {
 	// Set LED state to buttons
-
+	//buttons = updateButtons();
+	if(buttons & 0b10000001) ledOn(1);
+	if(buttons & 0b01000001) ledOn(2);
+	else ledOn(3);
+	if(buttons & 0b00100001) ledOn(4);
+	if(buttons & 0b00010001) ledOn(5);
+	if(buttons & 0b00001001) ledOn(6);
 }
 
 void updateShiftRegs() {
@@ -330,7 +347,28 @@ void print_buttons_bitwise(uint8_t buttons) {
     printf("\n");
 }
 
+void ledOn(int ledPos){
+	shiftLatch.write(1);
+	shiftLatch.write(0);
+	for(int i = 0; i < 8; i++){
+		if(ledPos == i){
+			ledOut.write(0);
+		} else {
+			ledOut.write(1);
+		}
+		shiftClk.write(1);
+		wait_us(10000);
+		shiftClk.write(0);
+	}
+	shiftLatch.write(1);
+}
 
+/*	for(int i = 0; i < 8; i++) {
+    if((buttons >> i) & 1) {
+        ledOn(i);  // function to turn on the LED at position i
+    }
+}
+*/
 
 ///////////////  Testing random functions
 /*
@@ -354,19 +392,6 @@ void buttonState(){
 	printf("Button state: %d\n", buttons);
 }
 
-void ledOn(int ledPos){
-	shiftLatch.write(0);
-	for(int i = 0; i < 8; i++){
-		if(ledPos == i){
-			ledOut.write(0);
-		} else {
-			ledOut.write(1);
-		}
-		shiftClk.write(1);
-		shiftClk.write(0);
-	}
-	shiftLatch.write(1);
-}
 
 void buttonTest(int buttonPress){
 	shiftClk = 1;
