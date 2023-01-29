@@ -75,4 +75,6 @@ void print_buttons_bitwise(uint8_t buttons);
 
 void setLedsToButtons();
 
+void updateShiftRegs();
+
 #endif

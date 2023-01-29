@@ -139,7 +139,8 @@ int main() {
 		receive_can();
 //		ledOn(3);
 		// setLeds();
-		updateButtons();
+//		updateButtons();
+		updateShiftRegs();
 //		setLedsToButtons();
 //		int buttonPress = buttonIn.read();
 //		setLedsToButtons(buttonPress);
@@ -327,7 +328,7 @@ uint8_t updateButtons() {
 
 void setLedsToButtons() {
 	// Set LED state to buttons
-	//buttons = updateButtons();
+	buttons = updateButtons();
 	if(buttons & 0b10000001) ledOn(1);
 	if(buttons & 0b01000001) ledOn(2);
 	else ledOn(3);
@@ -338,6 +339,39 @@ void setLedsToButtons() {
 
 void updateShiftRegs() {
 	// Update button status and output LED status at the same time
+	// Return state of all buttons
+	shiftLatch.write(1);
+	for(int i =0; i < 8; i++){
+		buttons = (buttons << 1) | buttonIn.read();
+		shiftClk.write(1);
+		wait_us(1000);
+		shiftClk.write(0);
+		wait_us(1000);
+	}
+	shiftLatch.write(0);
+	print_buttons_bitwise(buttons);
+
+	for(int i = 0; i < 6; i++) {
+		if((buttons >> 3) & 1) {
+			ledOn(7);
+		}
+		if((buttons >> 4) & 1) {
+			ledOn(6);
+		}
+		if((buttons >> 5) & 1) {
+			ledOn(5);
+		}
+		if((buttons >> 6) & 0) {
+			ledOn(4);
+		}		
+		if((buttons >> 6) & 1) {
+			ledOn(3);
+		}
+		if((buttons >> 7) & 1) {
+			ledOn(2);
+		}
+	}
+//	return buttons;
 }
 
 void print_buttons_bitwise(uint8_t buttons) {
@@ -348,7 +382,7 @@ void print_buttons_bitwise(uint8_t buttons) {
 }
 
 void ledOn(int ledPos){
-	shiftLatch.write(1);
+//	shiftLatch.write(1);
 	shiftLatch.write(0);
 	for(int i = 0; i < 8; i++){
 		if(ledPos == i){
@@ -357,7 +391,7 @@ void ledOn(int ledPos){
 			ledOut.write(1);
 		}
 		shiftClk.write(1);
-		wait_us(10000);
+		wait_us(1000);
 		shiftClk.write(0);
 	}
 	shiftLatch.write(1);
