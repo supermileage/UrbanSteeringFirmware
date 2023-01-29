@@ -107,7 +107,7 @@ char currentLed = 1;
 void setLed() {
 	if(currentLed == 6) currentLed = 1;
 	else currentLed++;
-	ledOn(currentLed);
+//	ledOn(currentLed);
 }
 
 int main() {
@@ -130,25 +130,13 @@ int main() {
 	display_thread.start(runSteeringDisplay);
 	
 	dmsLed.write(0);
-//	ledOn(6);
 
 	while (1) {
 		handleTime();
 		handle_accessories();
 		handle_motor_inputs();
 		receive_can();
-//		ledOn(3);
-		// setLeds();
-//		updateButtons();
 		updateShiftRegs();
-//		setLedsToButtons();
-//		int buttonPress = buttonIn.read();
-//		setLedsToButtons(buttonPress);
-		//buttonState();
-		//buttonRead(buttonPress);
-		//CHANGE MADE
-		//shiftReg(buttonIn.read());
-		//reading buttons
 	}
 }
 
@@ -294,84 +282,56 @@ void runSteeringDisplay() {
 	}
 }
 
-void setLeds() {
-	// Set all LEDs
-	shiftLatch.write(0);
-	for(int i = 0; i < 8; i++){
-		ledOut.write(0);
-		shiftClk.write(1);
-		shiftClk.write(0);
-	}
-	shiftLatch.write(1);
-}
-
-uint8_t updateButtons() {
-	// Return state of all buttons
-	shiftLatch.write(1);
-	for(int i =0; i < 8; i++){
-		buttons = (buttons << 1) | buttonIn.read();
-		shiftClk.write(1);
-		wait_us(1000);
-		shiftClk.write(0);
-		wait_us(1000);
-	}
-	shiftLatch.write(0);
-	print_buttons_bitwise(buttons);
-
-	for(int i = 0; i < 8; i++) {
-		if((buttons >> i) & 1) {
-			ledOn(i);
-		}
-	}
-	return buttons;
-}
-
-void setLedsToButtons() {
-	// Set LED state to buttons
-	buttons = updateButtons();
-	if(buttons & 0b10000001) ledOn(1);
-	if(buttons & 0b01000001) ledOn(2);
-	else ledOn(3);
-	if(buttons & 0b00100001) ledOn(4);
-	if(buttons & 0b00010001) ledOn(5);
-	if(buttons & 0b00001001) ledOn(6);
-}
-
 void updateShiftRegs() {
-	// Update button status and output LED status at the same time
-	// Return state of all buttons
-	shiftLatch.write(1);
-	for(int i =0; i < 8; i++){
-		buttons = (buttons << 1) | buttonIn.read();
-		shiftClk.write(1);
-		wait_us(1000);
-		shiftClk.write(0);
-		wait_us(1000);
-	}
-	shiftLatch.write(0);
-	print_buttons_bitwise(buttons);
+    shiftLatch.write(1);
+    for(int i =0; i < 8; i++){
+        buttons = (buttons << 1) | buttonIn.read();
+        shiftClk.write(1);
+        wait_us(1000);
+        shiftClk.write(0);
+        wait_us(1000);
+    }
+    shiftLatch.write(0);
+    print_buttons_bitwise(buttons);
+    int ledPositions[6] = {}; // array to hold the positions of the LEDs to turn on
+    int numLedPositions = 0; // variable to keep track of the number of LEDs to turn on
+    for(int i = 0; i < 6; i++) {
+        if((buttons >> 3) & 1) {
+            ledPositions[numLedPositions++] = 7; // add the position of the LED to the array and increment numLedPositions
+        }
+        if((buttons >> 4) & 1) {
+            ledPositions[numLedPositions++] = 6;
+        }
+        if((buttons >> 5) & 1) {
+            ledPositions[numLedPositions++] = 5;
+        }
+        if((buttons >> 6) & 0) {
+            ledPositions[numLedPositions++] = 4;
+        }       
+        if((buttons >> 6) & 1) {
+            ledPositions[numLedPositions++] = 3;
+        }
+        if((buttons >> 7) & 1) {
+            ledPositions[numLedPositions++] = 2;
+        }
+    }
+    ledOn(ledPositions, numLedPositions); // call ledOn with the array of LED positions and the number of positions
+}
 
-	for(int i = 0; i < 6; i++) {
-		if((buttons >> 3) & 1) {
-			ledOn(7);
-		}
-		if((buttons >> 4) & 1) {
-			ledOn(6);
-		}
-		if((buttons >> 5) & 1) {
-			ledOn(5);
-		}
-		if((buttons >> 6) & 0) {
-			ledOn(4);
-		}		
-		if((buttons >> 6) & 1) {
-			ledOn(3);
-		}
-		if((buttons >> 7) & 1) {
-			ledOn(2);
-		}
-	}
-//	return buttons;
+
+void ledOn(int ledPositions[], int numLedPositions){
+    int leds[8] = {0}; // All LEDs ON - using ! to counteract this
+    for(int i = 0; i < numLedPositions; i++){
+        leds[ledPositions[i]] = 1; 
+    }
+    shiftLatch.write(0);
+    for(int i = 0; i < 8; i++){
+        ledOut.write(!leds[i]); //Using ! to counter all LEDs initialised as ON
+        shiftClk.write(1);
+        wait_us(1000);
+        shiftClk.write(0);
+    }
+    shiftLatch.write(1);
 }
 
 void print_buttons_bitwise(uint8_t buttons) {
@@ -381,21 +341,7 @@ void print_buttons_bitwise(uint8_t buttons) {
     printf("\n");
 }
 
-void ledOn(int ledPos){
-//	shiftLatch.write(1);
-	shiftLatch.write(0);
-	for(int i = 0; i < 8; i++){
-		if(ledPos == i){
-			ledOut.write(0);
-		} else {
-			ledOut.write(1);
-		}
-		shiftClk.write(1);
-		wait_us(1000);
-		shiftClk.write(0);
-	}
-	shiftLatch.write(1);
-}
+
 
 /*	for(int i = 0; i < 8; i++) {
     if((buttons >> i) & 1) {
@@ -467,6 +413,78 @@ void buttonRead(int buttonPress){
 			ledOn(ledPos);
 		}
 		shiftClk.write(1);
+		shiftClk.write(0);
+	}
+	shiftLatch.write(1);
+}
+
+void setLeds() {
+	// Set all LEDs
+	shiftLatch.write(0);
+	for(int i = 0; i < 8; i++){
+		ledOut.write(0);
+		shiftClk.write(1);
+		shiftClk.write(0);
+	}
+	shiftLatch.write(1);
+}
+
+
+
+
+/////////////////////////////////////////////////////////////////////
+
+void updateShiftRegs() {
+	// Update button status and output LED status at the same time
+	// Return state of all buttons
+	shiftLatch.write(1);
+	for(int i =0; i < 8; i++){
+		buttons = (buttons << 1) | buttonIn.read();
+		shiftClk.write(1);
+		wait_us(1000);
+		shiftClk.write(0);
+		wait_us(1000);
+	}
+	shiftLatch.write(0);
+	print_buttons_bitwise(buttons);
+
+	for(int i = 0; i < 6; i++) {
+		if((buttons >> 3) & 1) {
+			ledOn(7);
+		}
+		if((buttons >> 4) & 1) {
+			ledOn(6);
+		}
+		if((buttons >> 5) & 1) {
+			ledOn(5);
+		}
+		if((buttons >> 6) & 0) {
+			ledOn(4);
+		}		
+		if((buttons >> 6) & 1) {
+			ledOn(3);
+		}
+		if((buttons >> 7) & 1) {
+			ledOn(2);
+		}
+	}
+}
+
+
+
+
+
+void ledOn(int ledPos){
+//	shiftLatch.write(1);
+	shiftLatch.write(0);
+	for(int i = 0; i < 8; i++){
+		if(ledPos == i){
+			ledOut.write(0);
+		} else {
+			ledOut.write(1);
+		}
+		shiftClk.write(1);
+		wait_us(1000);
 		shiftClk.write(0);
 	}
 	shiftLatch.write(1);

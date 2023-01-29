@@ -61,7 +61,9 @@ void handleTime();
 
 void buttonRead(int buttonPress);
 
-void ledOn(int ledPos);
+//void ledOn(int ledPos);
+
+void ledOn(int ledPositions[], int numLedPositions);
 
 void buttonTest(int buttonPress);
 
