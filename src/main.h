@@ -67,9 +67,7 @@ void ledOn(int ledPositions[], int numLedPositions);
 
 void buttonTest(int buttonPress);
 
-void buttonState();
-
-void setLeds();
+void setLedState();
 
 uint8_t updateButtons();
 

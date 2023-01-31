@@ -51,8 +51,8 @@ DigitalOut shiftLatch(D5);
 DigitalIn buttonIn(D6);
 
 //CHANGES- shift reg
-uint8_t buttons = 0;
-uint8_t leds = 0;
+bool buttonState[8] = {};
+bool ledState[8] = {};
 
 //Joystick
 AnalogIn joyX(A3);
@@ -103,13 +103,6 @@ void initializeDisplay() {
 	display.addDynamicGraphicBinding(timeVal, SteeringDisplay::Minutes);
 }
 
-char currentLed = 1;
-void setLed() {
-	if(currentLed == 6) currentLed = 1;
-	else currentLed++;
-//	ledOn(currentLed);
-}
-
 int main() {
 	timerMotor.start();
 	clockResetTimer.start();
@@ -137,6 +130,7 @@ int main() {
 		handle_motor_inputs();
 		receive_can();
 		updateShiftRegs();
+		setLedState();
 	}
 }
 
@@ -284,16 +278,18 @@ void runSteeringDisplay() {
 
 void updateShiftRegs() {
     shiftLatch.write(1);
-    for(int i =0; i < 8; i++){
-        buttons = (buttons << 1) | buttonIn.read();
+    for(int i = 7; i >= 0; i--){
+        buttonState[i] = buttonIn.read();
         shiftClk.write(1);
-        wait_us(1000);
         shiftClk.write(0);
-        wait_us(1000);
     }
     shiftLatch.write(0);
-    print_buttons_bitwise(buttons);
-    int ledPositions[6] = {}; // array to hold the positions of the LEDs to turn on
+	for(int i = 8; i >= 0; i--){
+        ledOut.write(!ledState[i]);
+        shiftClk.write(1);
+        shiftClk.write(0);
+    }
+	/*int ledPositions[6] = {}; // array to hold the positions of the LEDs to turn on
     int numLedPositions = 0; // variable to keep track of the number of LEDs to turn on
     for(int i = 0; i < 6; i++) {
         if((buttons >> 3) & 1) {
@@ -316,6 +312,20 @@ void updateShiftRegs() {
         }
     }
     ledOn(ledPositions, numLedPositions); // call ledOn with the array of LED positions and the number of positions
+	*/
+}
+
+void setLedState() {
+	// Set wiper LED
+	ledState[1] = buttonState[3];
+	// Set lights LED
+	ledState[2] = buttonState[4];
+	// Set Horn LED
+	ledState[3] = buttonState[5];
+	// Set Ignition LED
+	ledState[4] = !buttonState[6];
+	ledState[5] = buttonState[6];
+
 }
 
 
