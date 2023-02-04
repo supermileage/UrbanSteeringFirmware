@@ -61,7 +61,9 @@ AnalogIn joyY(A2);
 Timer timerMotor;
 Timer clockResetTimer;
 Timer timerAccessories;
-Timer timerFlash;
+
+bool lastHazards = false;
+Ticker timerFlash;
 
 //Ticker ledTest;
 
@@ -277,42 +279,26 @@ void runSteeringDisplay() {
 }
 
 void updateShiftRegs() {
-    shiftLatch.write(1);
+
+	shiftLatch.write(1);
     for(int i = 7; i >= 0; i--){
+		wait_us(500); // TODO: Debug hardware issue
         buttonState[i] = buttonIn.read();
         shiftClk.write(1);
         shiftClk.write(0);
     }
+	// printf("%1d%1d%1d%1d%1d%1d%1d%1d\n", buttonState[0], buttonState[1], buttonState[2], buttonState[3], buttonState[4], buttonState[5], buttonState[6], buttonState[7]);
     shiftLatch.write(0);
 	for(int i = 8; i >= 0; i--){
         ledOut.write(!ledState[i]);
         shiftClk.write(1);
         shiftClk.write(0);
     }
-	/*int ledPositions[6] = {}; // array to hold the positions of the LEDs to turn on
-    int numLedPositions = 0; // variable to keep track of the number of LEDs to turn on
-    for(int i = 0; i < 6; i++) {
-        if((buttons >> 3) & 1) {
-            ledPositions[numLedPositions++] = 7; // add the position of the LED to the array and increment numLedPositions
-        }
-        if((buttons >> 4) & 1) {
-            ledPositions[numLedPositions++] = 6;
-        }
-        if((buttons >> 5) & 1) {
-            ledPositions[numLedPositions++] = 5;
-        }
-        if((buttons >> 6) & 0) {
-            ledPositions[numLedPositions++] = 4;
-        }       
-        if((buttons >> 6) & 1) {
-            ledPositions[numLedPositions++] = 3;
-        }
-        if((buttons >> 7) & 1) {
-            ledPositions[numLedPositions++] = 2;
-        }
-    }
-    ledOn(ledPositions, numLedPositions); // call ledOn with the array of LED positions and the number of positions
-	*/
+
+}
+
+void blinkHazardLed() {
+	ledState[6] = !ledState[6];
 }
 
 void setLedState() {
@@ -325,6 +311,16 @@ void setLedState() {
 	// Set Ignition LED
 	ledState[4] = !buttonState[6];
 	ledState[5] = buttonState[6];
+	if(buttonState[7] != lastHazards) {
+		if(buttonState[7]) {
+			timerFlash.attach(blinkHazardLed, 500ms);
+			ledState[6] = true;
+		} else {
+			timerFlash.detach();
+			ledState[6] = false;
+		}
+		lastHazards = buttonState[7];
+	}
 
 }
 
