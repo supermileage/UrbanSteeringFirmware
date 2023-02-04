@@ -156,17 +156,12 @@ void handle_accessories() {
 }
 
 char read_accessory_inputs(char& hazards){
-    //TODO
 	lightsVal.set(buttonState[LIGHTS_BUTTON]);
 	char currentBrake = (char)(!brake.read());
-	//TODO
     char horn = buttonState[HORN_BUTTON];
-	//TODO
     hazards = buttonState[HAZARDS_BUTTON];
-	//TODO - change later for D3 and D4
     char turnLeft = buttonState[IND_LEFT_BUTTON];
     char turnRight = buttonState[IND_RIGHT_BUTTON];
-	//TODO
     char wiperVal = buttonState[WIPER_BUTTON];
 
 	// hazards on == both blinkers turned on at the same time
@@ -187,7 +182,6 @@ void handle_motor_inputs(){
 	if (duration_cast<milliseconds>(timerMotor.elapsed_time()).count() > MOTOR_CONTROLLER_TRANSMIT_INTERVAL) {
 
 		dmsVal.set(getDmsVal());
-		//TODO - change for D6
 		ignitionVal.set(buttonState[IGNITION_BUTTON]);
 		brakeVal.set((char)!brake.read());
 
