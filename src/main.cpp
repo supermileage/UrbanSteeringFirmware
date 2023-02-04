@@ -302,26 +302,3 @@ void setLedState() {
 	}
 
 }
-
-
-void ledOn(int ledPositions[], int numLedPositions){
-    int leds[8] = {0}; // All LEDs ON - using ! to counteract this
-    for(int i = 0; i < numLedPositions; i++){
-        leds[ledPositions[i]] = 1; 
-    }
-    shiftLatch.write(0);
-    for(int i = 0; i < 8; i++){
-        ledOut.write(!leds[i]); //Using ! to counter all LEDs initialised as ON
-        shiftClk.write(1);
-        wait_us(1000);
-        shiftClk.write(0);
-    }
-    shiftLatch.write(1);
-}
-
-void print_buttons_bitwise(uint8_t buttons) {
-    for (int i = 7; i >= 0; i--) {
-        printf("%d", (buttons >> i) & 1);
-    }
-    printf("\n");
-}
