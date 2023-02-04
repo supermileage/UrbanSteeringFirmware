@@ -50,11 +50,11 @@ DigitalOut ledOut(D4);
 DigitalOut shiftLatch(D5);
 DigitalIn buttonIn(D6);
 
-//CHANGES- shift reg
+// shift reg
 bool buttonState[8] = {};
 bool ledState[8] = {};
 
-//Joystick
+// Joystick
 AnalogIn joyX(A3);
 AnalogIn joyY(A2);
 
@@ -64,8 +64,6 @@ Timer timerAccessories;
 
 bool lastHazards = false;
 Ticker timerFlash;
-
-//Ticker ledTest;
 
 // Properties to bind to steering GUI and CAN events
 SharedProperty<data_t> dmsVal(0);
@@ -107,7 +105,6 @@ int main() {
 	timerMotor.start();
 	clockResetTimer.start();
 	timerAccessories.start();
-	//ledTest.attach(&setLed, 1.0);
 
 	shiftClk.write(0);
 	ledOut.write(0);
@@ -245,7 +242,7 @@ void receive_can() {
 
 void handleTime() {
 
-	if(!buttonState[0]) {
+	if(!buttonState[JOYSTICK_BUTTON]) {
 		clockResetTimer.reset();
 	} 
 
