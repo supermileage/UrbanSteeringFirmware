@@ -258,7 +258,6 @@ void runSteeringDisplay() {
 }
 
 void updateShiftRegs() {
-
 	shiftLatch.write(1);
     for(int i = 7; i >= 0; i--){
 		wait_us(500); // TODO: Debug hardware issue
@@ -266,39 +265,37 @@ void updateShiftRegs() {
         shiftClk.write(1);
         shiftClk.write(0);
     }
-	// printf("%1d%1d%1d%1d%1d%1d%1d%1d\n", buttonState[0], buttonState[1], buttonState[2], buttonState[3], buttonState[4], buttonState[5], buttonState[6], buttonState[7]);
     shiftLatch.write(0);
 	for(int i = 8; i >= 0; i--){
         ledOut.write(!ledState[i]);
         shiftClk.write(1);
         shiftClk.write(0);
     }
-
 }
 
 void blinkHazardLed() {
-	ledState[6] = !ledState[6];
+	ledState[HAZARDS_LED] = !ledState[HAZARDS_LED];
 }
 
 void setLedState() {
 	// Set wiper LED
-	ledState[1] = buttonState[3];
+	ledState[WIPER_LED] = buttonState[WIPER_BUTTON];
 	// Set lights LED
-	ledState[2] = buttonState[4];
+	ledState[LIGHTS_LED] = buttonState[LIGHTS_BUTTON];
 	// Set Horn LED
-	ledState[3] = buttonState[5];
+	ledState[HORN_LED] = buttonState[HORN_BUTTON];
 	// Set Ignition LED
-	ledState[4] = !buttonState[6];
-	ledState[5] = buttonState[6];
-	if(buttonState[7] != lastHazards) {
-		if(buttonState[7]) {
+	ledState[IGNITION_OFF_LED] = !buttonState[IGNITION_BUTTON];
+	ledState[IGNITION_ON_LED] = buttonState[IGNITION_BUTTON];
+	// Flash Hazards LED
+	if(buttonState[HAZARDS_BUTTON] != lastHazards) {
+		if(buttonState[HAZARDS_BUTTON]) {
 			timerFlash.attach(blinkHazardLed, 500ms);
-			ledState[6] = true;
+			ledState[HAZARDS_LED] = true;
 		} else {
 			timerFlash.detach();
-			ledState[6] = false;
+			ledState[HAZARDS_LED] = false;
 		}
-		lastHazards = buttonState[7];
+		lastHazards = buttonState[HAZARDS_BUTTON];
 	}
-
 }

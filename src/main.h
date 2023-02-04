@@ -11,6 +11,14 @@
 #define IGNITION_BUTTON 6
 #define HAZARDS_BUTTON 7
 
+//LED definitions
+#define WIPER_LED 1
+#define LIGHTS_LED 2
+#define HORN_LED 3
+#define IGNITION_OFF_LED 4
+#define IGNITION_ON_LED 5
+#define HAZARDS_LED 6
+
 #include "stdio.h"
 #include "mbed.h"
 
