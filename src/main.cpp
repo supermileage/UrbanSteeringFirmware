@@ -83,9 +83,7 @@ SharedProperty<data_t> lastGesture(0);
 SharedProperty<steering_time_t> timeVal(steering_time_t { 0, 0 });
 
 // global variables shared between main and display threads
-int64_t g_lastGestureTime = 0;
 int64_t g_lastTime = 0;
-char g_lastGesture = 0;
 
 void initializeDisplay() {
 	// initialize
@@ -252,24 +250,14 @@ void receive_can() {
 }
 
 void handleTime() {
-	//TODO - change for D6
-	char thisGesture = 0;
-	int64_t currentTime = duration_cast<milliseconds>(clockResetTimer.elapsed_time()).count();
 
-	// update timeVal
-	if (g_lastGestureTime + DEBOUNCE_TIME < currentTime && g_lastGesture != thisGesture) {
-		if (currentTime <= g_lastGestureTime + GESTURE_MARGIN) {
-			currentTime = 0;
-			g_lastTime = -1;
-			g_lastGestureTime = 0;
-			clockResetTimer.reset();
-		} else {
-			g_lastGestureTime = currentTime;
-		}
-	}
-	
+	if(!buttonState[0]) {
+		clockResetTimer.reset();
+	} 
+
+	int64_t currentTime =clockResetTimer.read_ms();
+
 	timeVal.set(steering_time_t { (int)currentTime / 1000 / 60, (int)currentTime / 1000 % 60 });
-	g_lastGesture = thisGesture;
 }
 
 void runSteeringDisplay() {
