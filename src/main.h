@@ -1,6 +1,16 @@
 #ifndef _MAIN_H // include guard
 #define _MAIN_H
 
+//Button Definitions
+#define JOYSTICK_BUTTON 0
+#define IND_RIGHT_BUTTON 2
+#define IND_LEFT_BUTTON 1
+#define WIPER_BUTTON 3
+#define LIGHTS_BUTTON 4
+#define HORN_BUTTON 5
+#define IGNITION_BUTTON 6
+#define HAZARDS_BUTTON 7
+
 #include "stdio.h"
 #include "mbed.h"
 
