@@ -77,22 +77,10 @@ void initializeDisplay();
  */
 void handleTime();
 
-void buttonRead(int buttonPress);
-
-//void ledOn(int ledPos);
-
-void ledOn(int ledPositions[], int numLedPositions);
-
-void buttonTest(int buttonPress);
-
 void setLedState();
 
-uint8_t updateButtons();
-
-void print_buttons_bitwise(uint8_t buttons);
-
-void setLedsToButtons();
-
 void updateShiftRegs();
+
+void blinkHazardLed();
 
 #endif

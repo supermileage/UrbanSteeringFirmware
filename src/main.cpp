@@ -34,7 +34,7 @@ SPI_TFT_ILI9341 TFT(D11, D12, D13, D9, D0, A4);
 DigitalOut sdCs(A0);
 CAN can(D10, D2, 500000);
 SteeringDisplay display(&TFT);
-BufferedSerial pc(USBTX, USBRX); // Uncomment to turn on serial monitor
+//BufferedSerial pc(USBTX, USBRX); // Uncomment to turn on serial monitor
 
 // Accessories
 DigitalIn brake(D1,PullUp);
@@ -260,7 +260,6 @@ void runSteeringDisplay() {
 void updateShiftRegs() {
 	shiftLatch.write(1);
     for(int i = 7; i >= 0; i--){
-		wait_us(500); // TODO: Debug hardware issue
         buttonState[i] = buttonIn.read();
         shiftClk.write(1);
         shiftClk.write(0);
