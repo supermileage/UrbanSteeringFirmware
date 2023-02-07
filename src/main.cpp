@@ -15,7 +15,7 @@
 using namespace std;
 using namespace std::chrono;
 
-#define DEBUG_THROTTLE 0
+#define DEBUG_THROTTLE 0 
 
 #define DMS_DELTA 	0.003f
 #define ACCESSORIES_TRANSMIT_INTERVAL 50
@@ -34,7 +34,7 @@ SPI_TFT_ILI9341 TFT(D11, D12, D13, D9, D0, A4);
 DigitalOut sdCs(A0);
 CAN can(D10, D2, 500000);
 SteeringDisplay display(&TFT);
-// BufferedSerial pc(USBTX, USBRX); // tx, rx
+//BufferedSerial pc(USBTX, USBRX); // Uncomment to turn on serial monitor
 
 // Accessories
 DigitalIn brake(D1,PullUp);
@@ -45,19 +45,25 @@ AnalogIn throttle(A6);
 DigitalOut dmsLed(A5);
 
 //shift registers
-DigitalOut shift_clk(D3);
-DigitalOut led_out(D4);
+DigitalOut shiftClk(D3);
+DigitalOut ledOut(D4);
 DigitalOut shiftLatch(D5);
 DigitalIn buttonIn(D6);
 
-//Joystick
+// shift reg
+bool buttonState[8] = {};
+bool ledState[8] = {};
+
+// Joystick
 AnalogIn joyX(A3);
 AnalogIn joyY(A2);
 
 Timer timerMotor;
 Timer clockResetTimer;
 Timer timerAccessories;
-Timer timerFlash;
+
+bool lastHazards = false;
+Ticker timerFlash;
 
 // Properties to bind to steering GUI and CAN events
 SharedProperty<data_t> dmsVal(0);
@@ -75,9 +81,7 @@ SharedProperty<data_t> lastGesture(0);
 SharedProperty<steering_time_t> timeVal(steering_time_t { 0, 0 });
 
 // global variables shared between main and display threads
-int64_t g_lastGestureTime = 0;
 int64_t g_lastTime = 0;
-char g_lastGesture = 0;
 
 void initializeDisplay() {
 	// initialize
@@ -102,8 +106,8 @@ int main() {
 	clockResetTimer.start();
 	timerAccessories.start();
 
-	shift_clk.write(0);
-	led_out.write(0);
+	shiftClk.write(0);
+	ledOut.write(0);
 	shiftLatch.write(0);
 	sdCs.write(1);
 
@@ -122,6 +126,8 @@ int main() {
 		handle_accessories();
 		handle_motor_inputs();
 		receive_can();
+		updateShiftRegs();
+		setLedState();
 	}
 }
 
@@ -145,18 +151,13 @@ void handle_accessories() {
 }
 
 char read_accessory_inputs(char& hazards){
-    //TODO
-	lightsVal.set(0);
+	lightsVal.set(buttonState[LIGHTS_BUTTON]);
 	char currentBrake = (char)(!brake.read());
-	//TODO
-    char horn = 0;
-	//TODO
-    hazards = 0;
-	//TODO - change later for D3 and D4
-    char turnLeft = 0;
-    char turnRight = 0;
-	//TODO
-    char wiperVal = 0;
+    char horn = buttonState[HORN_BUTTON];
+    hazards = buttonState[HAZARDS_BUTTON];
+    char turnLeft = buttonState[IND_LEFT_BUTTON];
+    char turnRight = buttonState[IND_RIGHT_BUTTON];
+    char wiperVal = buttonState[WIPER_BUTTON];
 
 	// hazards on == both blinkers turned on at the same time
     if (hazards) {
@@ -176,8 +177,7 @@ void handle_motor_inputs(){
 	if (duration_cast<milliseconds>(timerMotor.elapsed_time()).count() > MOTOR_CONTROLLER_TRANSMIT_INTERVAL) {
 
 		dmsVal.set(getDmsVal());
-		//TODO - change for D6
-		ignitionVal.set(0);
+		ignitionVal.set(buttonState[IGNITION_BUTTON]);
 		brakeVal.set((char)!brake.read());
 
 		throttle_t currentThrottle = get_throttle_val();
@@ -241,28 +241,60 @@ void receive_can() {
 }
 
 void handleTime() {
-	//TODO - change for D6
-	char thisGesture = 0;
-	int64_t currentTime = duration_cast<milliseconds>(clockResetTimer.elapsed_time()).count();
 
-	// update timeVal
-	if (g_lastGestureTime + DEBOUNCE_TIME < currentTime && g_lastGesture != thisGesture) {
-		if (currentTime <= g_lastGestureTime + GESTURE_MARGIN) {
-			currentTime = 0;
-			g_lastTime = -1;
-			g_lastGestureTime = 0;
-			clockResetTimer.reset();
-		} else {
-			g_lastGestureTime = currentTime;
-		}
-	}
-	
+	if(!buttonState[JOYSTICK_BUTTON]) {
+		clockResetTimer.reset();
+	} 
+
+	int64_t currentTime =clockResetTimer.read_ms();
+
 	timeVal.set(steering_time_t { (int)currentTime / 1000 / 60, (int)currentTime / 1000 % 60 });
-	g_lastGesture = thisGesture;
 }
 
 void runSteeringDisplay() {
 	while (1) {
 		display.run();
+	}
+}
+
+void updateShiftRegs() {
+	shiftLatch.write(1);
+    for(int i = 7; i >= 0; i--){
+        buttonState[i] = buttonIn.read();
+        shiftClk.write(1);
+        shiftClk.write(0);
+    }
+    shiftLatch.write(0);
+	for(int i = 8; i >= 0; i--){
+        ledOut.write(!ledState[i]);
+        shiftClk.write(1);
+        shiftClk.write(0);
+    }
+}
+
+void blinkHazardLed() {
+	ledState[HAZARDS_LED] = !ledState[HAZARDS_LED];
+}
+
+void setLedState() {
+	// Set wiper LED
+	ledState[WIPER_LED] = buttonState[WIPER_BUTTON];
+	// Set lights LED
+	ledState[LIGHTS_LED] = buttonState[LIGHTS_BUTTON];
+	// Set Horn LED
+	ledState[HORN_LED] = buttonState[HORN_BUTTON];
+	// Set Ignition LED
+	ledState[IGNITION_OFF_LED] = !buttonState[IGNITION_BUTTON];
+	ledState[IGNITION_ON_LED] = buttonState[IGNITION_BUTTON];
+	// Flash Hazards LED
+	if(buttonState[HAZARDS_BUTTON] != lastHazards) {
+		if(buttonState[HAZARDS_BUTTON]) {
+			timerFlash.attach(blinkHazardLed, 500ms);
+			ledState[HAZARDS_LED] = true;
+		} else {
+			timerFlash.detach();
+			ledState[HAZARDS_LED] = false;
+		}
+		lastHazards = buttonState[HAZARDS_BUTTON];
 	}
 }

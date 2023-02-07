@@ -1,6 +1,24 @@
 #ifndef _MAIN_H // include guard
 #define _MAIN_H
 
+//Button Definitions
+#define JOYSTICK_BUTTON 0
+#define IND_RIGHT_BUTTON 2
+#define IND_LEFT_BUTTON 1
+#define WIPER_BUTTON 3
+#define LIGHTS_BUTTON 4
+#define HORN_BUTTON 5
+#define IGNITION_BUTTON 6
+#define HAZARDS_BUTTON 7
+
+//LED definitions
+#define WIPER_LED 1
+#define LIGHTS_LED 2
+#define HORN_LED 3
+#define IGNITION_OFF_LED 4
+#define IGNITION_ON_LED 5
+#define HAZARDS_LED 6
+
 #include "stdio.h"
 #include "mbed.h"
 
@@ -58,5 +76,11 @@ void initializeDisplay();
  * @brief checks for and handles time reset gesture
  */
 void handleTime();
+
+void setLedState();
+
+void updateShiftRegs();
+
+void blinkHazardLed();
 
 #endif
