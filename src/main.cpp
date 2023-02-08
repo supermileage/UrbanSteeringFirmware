@@ -34,7 +34,7 @@ SPI_TFT_ILI9341 TFT(D11, D12, D13, D9, D0, A4);
 DigitalOut sdCs(A0);
 CAN can(D10, D2, 500000);
 SteeringDisplay display(&TFT);
-//BufferedSerial pc(USBTX, USBRX); // Uncomment to turn on serial monitor
+BufferedSerial pc(USBTX, USBRX); // Uncomment to turn on serial monitor
 
 // Accessories
 DigitalIn brake(D1,PullUp);

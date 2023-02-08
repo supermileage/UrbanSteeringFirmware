@@ -67,7 +67,7 @@
 #define THROTTLE_RAW_Y 210
 
 // turn signals
-#define TURN_FLASHING_INTERVAL	500
+#define TURN_FLASHING_INTERVAL	490
 #define TURN_WIDTH				30
 #define TURN_HEIGHT				30
 #define TURN_LEFT_X 			10
