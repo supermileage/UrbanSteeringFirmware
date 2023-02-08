@@ -15,9 +15,9 @@
 using namespace std;
 using namespace std::chrono;
 
-#define DEBUG_THROTTLE 0 
+#define DEBUG_MODE 
 
-#define DMS_DELTA 	0.003f
+#define DMS_DELTA 	6
 #define ACCESSORIES_TRANSMIT_INTERVAL 50
 #define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 50
 
@@ -34,7 +34,10 @@ SPI_TFT_ILI9341 TFT(D11, D12, D13, D9, D0, A4);
 DigitalOut sdCs(A0);
 CAN can(D10, D2, 500000);
 SteeringDisplay display(&TFT);
-//BufferedSerial pc(USBTX, USBRX); // Uncomment to turn on serial monitor
+
+#ifdef DEBUG_MODE
+	BufferedSerial pc(USBTX, USBRX); // Uncomment to turn on serial monitor
+#endif	
 
 // Accessories
 DigitalIn brake(D1,PullUp);
@@ -119,7 +122,7 @@ int main() {
 	Thread display_thread;
 	display_thread.start(runSteeringDisplay);
 	
-	dmsLed.write(0);
+	dmsLed.write(1);
 
 	while (1) {
 		handleTime();
@@ -128,6 +131,8 @@ int main() {
 		receive_can();
 		updateShiftRegs();
 		setLedState();
+
+
 	}
 }
 
@@ -214,13 +219,16 @@ throttle_t get_throttle_val() {
 }
 
 data_t getDmsVal() {
-	float dms_ctrl = dms.read();
-	dmsLed.write(1);
-	wait_us(40);
-    float dms_val = dms.read();
+	int dms_ctrl = (int)(dms.read() * 10000);
 	dmsLed.write(0);
-
-    return (data_t)(dms_val > dms_ctrl + DMS_DELTA);
+	wait_us(40);
+    int dms_val = (int)(dms.read() * 10000);
+	dmsLed.write(0);
+	int dms_delta = dms_val - dms_ctrl;
+	#ifdef DEBUG_MODE
+		printf("DMS Control: %04d - DMS Value: %04d - DMS Delta: %03d\n", dms_ctrl, dms_val, dms_delta >= 0 ? dms_delta : 0);
+	#endif
+    return (data_t)(dms_delta > DMS_DELTA);
 }
 
 // Checks for gps speed / bms data updates from telemetry
