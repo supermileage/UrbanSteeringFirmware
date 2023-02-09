@@ -125,7 +125,7 @@ int main() {
 	Thread display_thread;
 	display_thread.start(runSteeringDisplay);
 	
-	dmsLed.write(1);
+	dmsLed.write(0);
 
 	while (1) {
 		handleTime();
