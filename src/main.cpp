@@ -15,18 +15,19 @@
 using namespace std;
 using namespace std::chrono;
 
-#define DEBUG_MODE 
+// #define DEBUG_MODE 
+#define DMS_DELTA 	5
+#define MIN_THROTTLE_INPUT 3600
+#define MAX_THROTTLE_INPUT 4550
 
-#define DMS_DELTA 	6
+#define DMS_DELTA_COUNT	3
 #define ACCESSORIES_TRANSMIT_INTERVAL 50
 #define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 50
-
 #define DEBOUNCE_TIME 50
 #define GESTURE_MARGIN 500
-#define MIN_THROTTLE_OUTPUT 0.0f
-#define MAX_THROTTLE_OUTPUT 255.0f
-#define MIN_THROTTLE_INPUT 0.36f
-#define MAX_THROTTLE_INPUT 0.455f
+
+#define MIN_THROTTLE_OUTPUT 0
+#define MAX_THROTTLE_OUTPUT 255
 #define SLOPE (MAX_THROTTLE_OUTPUT - MIN_THROTTLE_OUTPUT) / (MAX_THROTTLE_INPUT - MIN_THROTTLE_INPUT)
 #define OFFSET MAX_THROTTLE_OUTPUT - (SLOPE * MAX_THROTTLE_INPUT)
 
@@ -85,6 +86,8 @@ SharedProperty<steering_time_t> timeVal(steering_time_t { 0, 0 });
 
 // global variables shared between main and display threads
 int64_t g_lastTime = 0;
+
+int dmsDeltaCount = 0;
 
 void initializeDisplay() {
 	// initialize
@@ -207,28 +210,43 @@ void handle_motor_inputs(){
 }
 
 throttle_t get_throttle_val() {
-	float throttleAsFloat = throttle.read();
+	int throttleVal = (int)(throttle.read() * 10000);
 
-	if (throttleAsFloat <= MIN_THROTTLE_INPUT) {
-		return (throttle_t)MIN_THROTTLE_OUTPUT;
-	} else if (throttleAsFloat >= MAX_THROTTLE_INPUT) {
-		return (throttle_t)MAX_THROTTLE_OUTPUT;
+	#ifdef DEBUG_MODE
+		printf("Throttle: %04d - ", throttleVal);
+	#endif
+
+	if (throttleVal <= MIN_THROTTLE_INPUT) {
+		throttleVal = MIN_THROTTLE_OUTPUT;
+	} else if (throttleVal >= MAX_THROTTLE_INPUT) {
+		throttleVal = MAX_THROTTLE_OUTPUT;
 	}
 
-	return (throttle_t)(throttleAsFloat * SLOPE + OFFSET);
+	#ifdef DEBUG_MODE
+		printf("Adjusted Throttle: %04d - ", throttleVal);
+	#endif
+
+	return (throttle_t)(throttleVal * SLOPE + OFFSET);
 }
 
 data_t getDmsVal() {
-	int dms_ctrl = (int)(dms.read() * 10000);
+	int dmsCtrl = (int)(dms.read() * 10000);
 	dmsLed.write(0);
-	wait_us(40);
-    int dms_val = (int)(dms.read() * 10000);
+	wait_us(100);
+    int dmsVal = (int)(dms.read() * 10000);
 	dmsLed.write(0);
-	int dms_delta = dms_val - dms_ctrl;
+	int dmsDelta = dmsVal - dmsCtrl;
 	#ifdef DEBUG_MODE
-		printf("DMS Control: %04d - DMS Value: %04d - DMS Delta: %03d\n", dms_ctrl, dms_val, dms_delta >= 0 ? dms_delta : 0);
+		printf("DMS Delta: %04d\n", dmsDelta >= 0 ? dmsDelta : 0);
 	#endif
-    return (data_t)(dms_delta > DMS_DELTA);
+
+	if(dmsDelta > DMS_DELTA) {
+		dmsDeltaCount++;
+	} else {
+		dmsDeltaCount = 0;
+	}
+
+    return (data_t)(dmsDeltaCount > DMS_DELTA_COUNT);
 }
 
 // Checks for gps speed / bms data updates from telemetry
