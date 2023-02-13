@@ -16,7 +16,7 @@ using namespace std;
 using  namespace std::chrono;
 
 // #define DEBUG_MODE 
-#define DMS_DELTA_THRESHOLD 300
+#define DMS_DELTA_THRESHOLD 200
 #define MIN_THROTTLE_INPUT 3000
 #define MAX_THROTTLE_INPUT 7000
 
@@ -232,7 +232,7 @@ throttle_t get_throttle_val() {
 data_t getDmsVal() {
 	int dmsCtrl = (int)(dms.read() * 10000);
 	dmsLed.write(1);
-	wait_us(400);
+	wait_us(40);
     int dmsVal = (int)(dms.read() * 10000);
 	dmsLed.write(0);
 	int dmsDelta = dmsVal - dmsCtrl;
