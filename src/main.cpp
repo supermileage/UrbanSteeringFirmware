@@ -13,13 +13,12 @@
 #include "main.h"
 
 using namespace std;
-using namespace std::chrono;
+using  namespace std::chrono;
 
 // #define DEBUG_MODE 
-#define DMS_DELTA 	5
-#define DMS_DELTA_COUNT	3
-#define MIN_THROTTLE_INPUT 3600
-#define MAX_THROTTLE_INPUT 4550
+#define DMS_DELTA_THRESHOLD 300
+#define MIN_THROTTLE_INPUT 3000
+#define MAX_THROTTLE_INPUT 7000
 
 #define ACCESSORIES_TRANSMIT_INTERVAL 50
 #define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 50
@@ -28,8 +27,7 @@ using namespace std::chrono;
 
 #define MIN_THROTTLE_OUTPUT 0
 #define MAX_THROTTLE_OUTPUT 255
-#define SLOPE (MAX_THROTTLE_OUTPUT - MIN_THROTTLE_OUTPUT) / (MAX_THROTTLE_INPUT - MIN_THROTTLE_INPUT)
-#define OFFSET MAX_THROTTLE_OUTPUT - (SLOPE * MAX_THROTTLE_INPUT)
+#define THROTTLE_RANGE (MAX_THROTTLE_INPUT - MIN_THROTTLE_INPUT)
 
 SPI_TFT_ILI9341 TFT(D11, D12, D13, D9, D0, A4);
 DigitalOut sdCs(A0);
@@ -86,8 +84,6 @@ SharedProperty<steering_time_t> timeVal(steering_time_t { 0, 0 });
 
 // global variables shared between main and display threads
 int64_t g_lastTime = 0;
-
-int dmsDeltaCount = 0;
 
 void initializeDisplay() {
 	// initialize
@@ -189,7 +185,7 @@ void handle_motor_inputs(){
 		brakeVal.set((char)!brake.read());
 
 		throttle_t currentThrottle = get_throttle_val();
-		
+
 		if (!dmsVal.value() || !ignitionVal.value() || brakeVal.value()) {
 			currentThrottle = 0;
 		}
@@ -210,29 +206,33 @@ void handle_motor_inputs(){
 }
 
 throttle_t get_throttle_val() {
+
 	int throttleVal = (int)(throttle.read() * 10000);
 
 	#ifdef DEBUG_MODE
-		printf("Throttle: %04d - ", throttleVal);
+		printf("Throttle Input: %04d - ", throttleVal);
 	#endif
 
+	// Keep values within min/max
 	if (throttleVal <= MIN_THROTTLE_INPUT) {
-		throttleVal = MIN_THROTTLE_OUTPUT;
+		throttleVal = MIN_THROTTLE_INPUT;
 	} else if (throttleVal >= MAX_THROTTLE_INPUT) {
-		throttleVal = MAX_THROTTLE_OUTPUT;
+		throttleVal = MAX_THROTTLE_INPUT;
 	}
 
-	#ifdef DEBUG_MODE
-		printf("Adjusted Throttle: %04d - ", throttleVal);
-	#endif
+	// Normalize throttle value
+	throttleVal -= MIN_THROTTLE_INPUT;
 
-	return (throttle_t)(throttleVal * SLOPE + OFFSET);
+	// Scale for output
+	throttle_t throttleOut = (throttleVal * MAX_THROTTLE_OUTPUT) / THROTTLE_RANGE;
+
+	return throttleOut;
 }
 
 data_t getDmsVal() {
 	int dmsCtrl = (int)(dms.read() * 10000);
-	dmsLed.write(0);
-	wait_us(100);
+	dmsLed.write(1);
+	wait_us(400);
     int dmsVal = (int)(dms.read() * 10000);
 	dmsLed.write(0);
 	int dmsDelta = dmsVal - dmsCtrl;
@@ -240,13 +240,7 @@ data_t getDmsVal() {
 		printf("DMS Delta: %04d\n", dmsDelta >= 0 ? dmsDelta : 0);
 	#endif
 
-	if(dmsDelta > DMS_DELTA) {
-		dmsDeltaCount++;
-	} else {
-		dmsDeltaCount = 0;
-	}
-
-    return (data_t)(dmsDeltaCount > DMS_DELTA_COUNT);
+    return  (data_t)(dmsDelta > DMS_DELTA_THRESHOLD);
 }
 
 // Checks for gps speed / bms data updates from telemetry
