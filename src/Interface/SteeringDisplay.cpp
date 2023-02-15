@@ -13,14 +13,14 @@
 #define COOL_FONT 	Neu42x35
 
 // accessories
-#define DMS_X 						10
-#define IGNITION_X 					60
-#define BRAKE_X						100
+#define DMS_X 						100
+#define IGNITION_X 					10
+#define BRAKE_X						55
 #define STATUS_Y 					5
 #define CIRCLE_RADIUS 				10
 #define CIRCLE_Y_OFFSET 			CIRCLE_RADIUS * 3
 #define CIRCLE_X_OFFSET_DMS  		14
-#define CIRCLE_X_OFFSET_IGNITION  	10
+#define CIRCLE_X_OFFSET_IGNITION  	15
 #define CIRCLE_X_OFFSET_BRAKE  		14
 
 // voltage
@@ -67,7 +67,7 @@
 #define THROTTLE_RAW_Y 210
 
 // turn signals
-#define TURN_FLASHING_INTERVAL	500
+#define TURN_FLASHING_INTERVAL	490
 #define TURN_WIDTH				30
 #define TURN_HEIGHT				30
 #define TURN_LEFT_X 			10
@@ -102,7 +102,7 @@ void SteeringDisplay::init() {
 
 	// Ignition
 	_tft->locate(IGNITION_X, STATUS_Y);
-	_tft->printf("IGN");
+	_tft->printf("RUN");
 	_ignitionIcon.init(_tft, IGNITION_X + CIRCLE_X_OFFSET_IGNITION, CIRCLE_Y_OFFSET, Red, CIRCLE_RADIUS, true);
 	_setDynamicGraphic(SteeringDisplay::Ignition, &_ignitionIcon);
 
