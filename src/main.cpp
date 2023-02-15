@@ -16,7 +16,7 @@ using namespace std;
 using  namespace std::chrono;
 
 // #define DEBUG_MODE 
-#define DMS_DELTA_THRESHOLD 200
+#define DMS_DELTA_THRESHOLD 250
 #define MIN_THROTTLE_INPUT 3000
 #define MAX_THROTTLE_INPUT 7000
 
