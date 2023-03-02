@@ -85,7 +85,7 @@ SteeringDisplay::SteeringDisplay(SPI_TFT_ILI9341* tft) : _tft(tft) {
 	_animationTimer.start();
 }
 
-void SteeringDisplay::init() {
+void SteeringDisplay::initMain() {
 	// initialize tft display
 	_tft->set_orientation(3);
 	_tft->background(Black);
@@ -164,7 +164,25 @@ void SteeringDisplay::init() {
 	_runRedrawQueue();
 }
 
-void SteeringDisplay::run() {
+void SteeringDisplay::initMenu() {
+	_tft->cls();
+
+	_tft->set_font((unsigned char*) SMALL_FONT);
+	
+	// Title
+	_tft->locate(20, 10);
+	_tft->printf("CALIBRATION MENU");
+
+	// Throttle Label
+	_tft->locate(20, 40);
+	_tft->printf("Throttle Calibration:");
+
+	// DMS Label
+	_tft->locate(20, 100);
+	_tft->printf("DMS Calibration:");
+}
+
+void SteeringDisplay::runMain() {
 	_runRedrawQueue();
 
 	// run action queue
@@ -178,6 +196,10 @@ void SteeringDisplay::run() {
 	int64_t currentTime = std::chrono::duration_cast<std::chrono::milliseconds>(_animationTimer.elapsed_time()).count();
 	for (const auto& pair : _animations)
 		pair.second->run(currentTime);
+}
+
+void SteeringDisplay::runMenu() {
+	
 }
 
 void SteeringDisplay::_runRedrawQueue() {

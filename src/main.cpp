@@ -23,7 +23,7 @@ using  namespace std::chrono;
 #define ACCESSORIES_TRANSMIT_INTERVAL 50
 #define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 50
 #define DEBOUNCE_TIME 50
-#define GESTURE_MARGIN 500
+#define BUTTON_HOLD_TIME 2000
 
 #define MIN_THROTTLE_OUTPUT 0
 #define MAX_THROTTLE_OUTPUT 255
@@ -63,8 +63,11 @@ AnalogIn joyY(A2);
 Timer timerMotor;
 Timer clockResetTimer;
 Timer timerAccessories;
+Timer joystickButtonPushed;
 
 bool lastHazards = false;
+bool lastJoystickButton = false;
+bool menu = false;
 Ticker timerFlash;
 
 // Properties to bind to steering GUI and CAN events
@@ -82,12 +85,9 @@ SharedProperty<data_t> prevAccVal(0);
 SharedProperty<data_t> lastGesture(0);
 SharedProperty<steering_time_t> timeVal(steering_time_t { 0, 0 });
 
-// global variables shared between main and display threads
-int64_t g_lastTime = 0;
-
 void initializeDisplay() {
 	// initialize
-	display.init();
+	display.initMain();
 
 	// add data display bindings
 	display.addDynamicGraphicBinding(dmsVal, SteeringDisplay::Dms);
@@ -107,6 +107,7 @@ int main() {
 	timerMotor.start();
 	clockResetTimer.start();
 	timerAccessories.start();
+	joystickButtonPushed.stop();
 
 	shiftClk.write(0);
 	ledOut.write(0);
@@ -124,14 +125,12 @@ int main() {
 	dmsLed.write(0);
 
 	while (1) {
-		handleTime();
+		handleButton();
 		handle_accessories();
 		handle_motor_inputs();
 		receive_can();
 		updateShiftRegs();
 		setLedState();
-
-
 	}
 }
 
@@ -260,20 +259,50 @@ void receive_can() {
 	}
 }
 
-void handleTime() {
+void handleButton() {
 
+	int64_t currentTime = clockResetTimer.read_ms();
+	
+	// Button pressed
 	if(!buttonState[JOYSTICK_BUTTON]) {
-		clockResetTimer.reset();
-	} 
+		// Button was previously not pressed
+		if(lastJoystickButton) {
+			joystickButtonPushed.reset();
+			joystickButtonPushed.start();
+		}
+		timeVal.set(steering_time_t{0,0});
+	} // Button not pressed 
+	else {
+		// Button was previously pressed
+		if(!lastJoystickButton) {
+			joystickButtonPushed.stop();
+			if(joystickButtonPushed.read_ms() < BUTTON_HOLD_TIME) {
+				clockResetTimer.reset();
+			}
+		}
+		timeVal.set(steering_time_t { (int)currentTime / 1000 / 60, (int)currentTime / 1000 % 60 });
+	}
 
-	int64_t currentTime =clockResetTimer.read_ms();
+	// Enter menu if button held
+	if(joystickButtonPushed.read_ms() >= BUTTON_HOLD_TIME) {
+		if(!menu) {
+			display.initMenu();
+			menu = true;
+			joystickButtonPushed.stop();
+		}
+	}
 
-	timeVal.set(steering_time_t { (int)currentTime / 1000 / 60, (int)currentTime / 1000 % 60 });
+	lastJoystickButton = buttonState[JOYSTICK_BUTTON];
+	
 }
 
 void runSteeringDisplay() {
 	while (1) {
-		display.run();
+		if(menu) {
+			display.runMenu();
+		} else {
+			display.runMain();
+		}
 	}
 }
 

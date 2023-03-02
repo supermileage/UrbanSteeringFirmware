@@ -22,15 +22,15 @@
 
 using namespace util;
 
-#define DEBUG_THROTTLE 0
-
 class SteeringDisplay {
 	public:
 		enum DynamicGraphicId { Dms, Ignition, Brake, Battery, Soc, Voltage, Speed, Power, Lights, LeftSignal, RightSignal, Minutes, Seconds };
 		SteeringDisplay(SPI_TFT_ILI9341* tft);
 		~SteeringDisplay() { }
-		void init();
-		void run();
+		void initMain();
+		void initMenu();
+		void runMain();
+		void runMenu();
 
 		template <class T>
 		void addDynamicGraphicBinding(SharedProperty<T>& property, DynamicGraphicId id) {

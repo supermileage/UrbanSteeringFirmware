@@ -73,9 +73,9 @@ void receive_can();
 void initializeDisplay();
 
 /**
- * @brief checks for and handles time reset gesture
+ * @brief checks for and handles joystick button actions
  */
-void handleTime();
+void handleButton();
 
 void setLedState();
 
