@@ -133,7 +133,7 @@ int main() {
 		receive_can();
 		updateShiftRegs();
 		setLedState();
-		blinkSet();
+		blink.set(ledState[HAZARDS_LED]);
 	}
 }
 
@@ -167,10 +167,8 @@ char read_accessory_inputs(char& hazards){
 
 	// hazards on == both blinkers turned on at the same time
     if (hazards) {
-		//turnLeftVal.set(1);
-        //turnRightVal.set(1);
-		//blink.set(true);
-		;
+		turnLeftVal.set(0);
+        turnRightVal.set(0);
     } else {
 		turnLeftVal.set(turnLeft);
 		turnRightVal.set(turnRight);
@@ -307,11 +305,4 @@ void setLedState() {
 		}
 		lastHazards = buttonState[HAZARDS_BUTTON];
 	}
-}
-
-void blinkSet(){
-	if(ledState[HAZARDS_LED]!= lastHazardsLed){
-		blink.set(ledState[HAZARDS_LED]);
-	}
-	lastHazardsLed = ledState[HAZARDS_LED];
 }
