@@ -90,7 +90,7 @@ class SteeringDisplay {
 		void _onLeftSignalChanged(const data_t value);
 		void _onRightSignalChanged(const data_t value);
 		void _onTimeChanged(const steering_time_t value);
-		void _onHazardsPressed(const data_t value);	//UPDATE
+		void _onBlinkChanged(const data_t value);	//UPDATE
 
 		// Data changed helpers
 		void _updateCircleIcon(DynamicGraphicId id, data_t value);

@@ -227,7 +227,7 @@ Command* SteeringDisplay::_getDelegateForGraphicId(SteeringDisplay::DynamicGraph
 			return new Delegate<SteeringDisplay, steering_time_t>(this, &SteeringDisplay::_onTimeChanged);
 			break;
 		case SteeringDisplay::Hazards:	//UPDATE
-			return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onHazardsPressed);
+			return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onBlinkChanged);
 			break;
 		default:
 			// do nothing
@@ -316,7 +316,7 @@ void SteeringDisplay::_onTimeChanged(const steering_time_t value) {
 }
 
 //UPDATE
-void SteeringDisplay::_onHazardsPressed(const data_t value) {
+void SteeringDisplay::_onBlinkChanged(const data_t value) {
 	_handleAnimationChanged(SteeringDisplay::Hazards, !value);
 	/*
 	_actionQueue.push([this, id]() -> void {
