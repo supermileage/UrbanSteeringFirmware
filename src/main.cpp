@@ -65,6 +65,9 @@ Timer timerAccessories;
 bool lastHazards = false;
 Ticker timerFlash;
 
+bool screen_blink = true;
+Ticker screenBlinker;
+
 // Properties to bind to steering GUI and CAN events
 SharedProperty<data_t> dmsVal(0);
 SharedProperty<data_t> ignitionVal(0);
@@ -163,13 +166,14 @@ char read_accessory_inputs(char& hazards){
 
 	// hazards on == both blinkers turned on at the same time
     if (hazards) {
-		turnLeftVal.set(1);
-        turnRightVal.set(1);
+		//turnLeftVal.set(1);
+        //turnRightVal.set(1);
+		//blink.set(true);
     } else {
 		turnLeftVal.set(turnLeft);
 		turnRightVal.set(turnRight);
+		//blink.set(false);
 	}
-
     char dataStr = (wiperVal << 6) | (turnLeftVal.value() << 5) | (turnRightVal.value() << 4) |
 		(hazards << 3) |(horn << 2) | (currentBrake << 1) | lightsVal.value();
     return dataStr;
@@ -276,6 +280,12 @@ void updateShiftRegs() {
 
 void blinkHazardLed() {
 	ledState[HAZARDS_LED] = !ledState[HAZARDS_LED];
+	blink.set(ledState[HAZARDS_LED]);
+}
+
+void blinkHazardAnimation(){
+	blink.set(screen_blink);
+	screen_blink = !screen_blink;
 }
 
 void setLedState() {
@@ -292,6 +302,7 @@ void setLedState() {
 	if(buttonState[HAZARDS_BUTTON] != lastHazards) {
 		if(buttonState[HAZARDS_BUTTON]) {
 			timerFlash.attach(blinkHazardLed, 500ms);
+			//screenBlinker.attach(blinkHazardAnimation, 500ms);
 			ledState[HAZARDS_LED] = true;
 		} else {
 			timerFlash.detach();

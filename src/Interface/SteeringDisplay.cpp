@@ -317,13 +317,21 @@ void SteeringDisplay::_onTimeChanged(const steering_time_t value) {
 
 //UPDATE
 void SteeringDisplay::_onBlinkChanged(const data_t value) {
-	_handleAnimationChanged(SteeringDisplay::Hazards, !value);
-	/*
-	_actionQueue.push([this, id]() -> void {
-			if (_animations.find(id) == _animations.end())
-				_animations[id] = new AnimationFlashing(_dynamicGraphics[id], TURN_FLASHING_INTERVAL);
-		})
-	*/
+	//_handleAnimationChanged(SteeringDisplay::Hazards, !value);
+	RedrawAction action_left { &_leftSignal, 0x0 };
+	RedrawAction action_right { &_rightSignal, 0x0 };
+
+	if (value){
+		action_left.method = &Shape::draw;
+		action_right.method = &Shape::draw;
+	}
+	else{
+		action_left.method = &Shape::clear;
+		action_right.method = &Shape::clear;
+	}
+
+	_redrawActionQueue.push(action_left);
+	_redrawActionQueue.push(action_right);
 }
 
 void SteeringDisplay::_updateCircleIcon(DynamicGraphicId id, data_t value) {
