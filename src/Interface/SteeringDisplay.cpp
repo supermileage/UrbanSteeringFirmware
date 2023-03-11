@@ -226,7 +226,7 @@ Command* SteeringDisplay::_getDelegateForGraphicId(SteeringDisplay::DynamicGraph
 		case SteeringDisplay::Minutes:
 			return new Delegate<SteeringDisplay, steering_time_t>(this, &SteeringDisplay::_onTimeChanged);
 			break;
-		case SteeringDisplay::Hazards:	//UPDATE
+		case SteeringDisplay::Hazards:	
 			return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onBlinkChanged);
 			break;
 		default:
@@ -315,9 +315,7 @@ void SteeringDisplay::_onTimeChanged(const steering_time_t value) {
 	}
 }
 
-//UPDATE
 void SteeringDisplay::_onBlinkChanged(const data_t value) {
-	//_handleAnimationChanged(SteeringDisplay::Hazards, !value);
 	RedrawAction action_left { &_leftSignal, 0x0 };
 	RedrawAction action_right { &_rightSignal, 0x0 };
 

@@ -65,9 +65,6 @@ Timer timerAccessories;
 bool lastHazards = false;
 Ticker timerFlash;
 
-bool lastHazardsLed = false;
-Ticker screenBlinker;
-
 // Properties to bind to steering GUI and CAN events
 SharedProperty<data_t> dmsVal(0);
 SharedProperty<data_t> ignitionVal(0);
@@ -296,8 +293,6 @@ void setLedState() {
 	if(buttonState[HAZARDS_BUTTON] != lastHazards) {
 		if(buttonState[HAZARDS_BUTTON]) {
 			timerFlash.attach(blinkHazardLed, 500ms);
-			//screenBlinker.attach(blinkHazardAnimation, 500ms);
-			//blink.set(true);
 			ledState[HAZARDS_LED] = true;
 		} else {
 			timerFlash.detach();
