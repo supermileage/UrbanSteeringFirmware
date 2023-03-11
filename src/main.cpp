@@ -13,28 +13,27 @@
 #include "main.h"
 
 using namespace std;
-using namespace std::chrono;
+using  namespace std::chrono;
 
-#define DEBUG_THROTTLE 0 
+// #define DEBUG_MODE 
+#define DMS_DELTA_THRESHOLD 250
+#define MIN_THROTTLE_INPUT 3000
+#define MAX_THROTTLE_INPUT 7000
 
-#define DMS_DELTA 	0.003f
 #define ACCESSORIES_TRANSMIT_INTERVAL 50
 #define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 50
-
 #define DEBOUNCE_TIME 50
 #define GESTURE_MARGIN 500
-#define MIN_THROTTLE_OUTPUT 0.0f
-#define MAX_THROTTLE_OUTPUT 255.0f
-#define MIN_THROTTLE_INPUT 0.36f
-#define MAX_THROTTLE_INPUT 0.455f
-#define SLOPE (MAX_THROTTLE_OUTPUT - MIN_THROTTLE_OUTPUT) / (MAX_THROTTLE_INPUT - MIN_THROTTLE_INPUT)
-#define OFFSET MAX_THROTTLE_OUTPUT - (SLOPE * MAX_THROTTLE_INPUT)
+
+#define MIN_THROTTLE_OUTPUT 0
+#define MAX_THROTTLE_OUTPUT 255
+#define THROTTLE_RANGE (MAX_THROTTLE_INPUT - MIN_THROTTLE_INPUT)
 
 SPI_TFT_ILI9341 TFT(D11, D12, D13, D9, D0, A4);
 DigitalOut sdCs(A0);
 CAN can(D10, D2, 500000);
 SteeringDisplay display(&TFT);
-BufferedSerial pc(USBTX, USBRX); // Uncomment to turn on serial monitor
+//BufferedSerial pc(USBTX, USBRX); // Uncomment to turn on serial monitor
 
 // Accessories
 DigitalIn brake(D1,PullUp);
@@ -130,6 +129,8 @@ int main() {
 		receive_can();
 		updateShiftRegs();
 		setLedState();
+
+
 		blink.set(ledState[HAZARDS_LED]);
 	}
 }
@@ -184,7 +185,7 @@ void handle_motor_inputs(){
 		brakeVal.set((char)!brake.read());
 
 		throttle_t currentThrottle = get_throttle_val();
-		
+
 		if (!dmsVal.value() || !ignitionVal.value() || brakeVal.value()) {
 			currentThrottle = 0;
 		}
@@ -205,25 +206,41 @@ void handle_motor_inputs(){
 }
 
 throttle_t get_throttle_val() {
-	float throttleAsFloat = throttle.read();
 
-	if (throttleAsFloat <= MIN_THROTTLE_INPUT) {
-		return (throttle_t)MIN_THROTTLE_OUTPUT;
-	} else if (throttleAsFloat >= MAX_THROTTLE_INPUT) {
-		return (throttle_t)MAX_THROTTLE_OUTPUT;
+	int throttleVal = (int)(throttle.read() * 10000);
+
+	#ifdef DEBUG_MODE
+		printf("Throttle Input: %04d - ", throttleVal);
+	#endif
+
+	// Keep values within min/max
+	if (throttleVal <= MIN_THROTTLE_INPUT) {
+		throttleVal = MIN_THROTTLE_INPUT;
+	} else if (throttleVal >= MAX_THROTTLE_INPUT) {
+		throttleVal = MAX_THROTTLE_INPUT;
 	}
 
-	return (throttle_t)(throttleAsFloat * SLOPE + OFFSET);
+	// Normalize throttle value
+	throttleVal -= MIN_THROTTLE_INPUT;
+
+	// Scale for output
+	throttle_t throttleOut = (throttleVal * MAX_THROTTLE_OUTPUT) / THROTTLE_RANGE;
+
+	return throttleOut;
 }
 
 data_t getDmsVal() {
-	float dms_ctrl = dms.read();
+	int dmsCtrl = (int)(dms.read() * 10000);
 	dmsLed.write(1);
 	wait_us(40);
-    float dms_val = dms.read();
+    int dmsVal = (int)(dms.read() * 10000);
 	dmsLed.write(0);
+	int dmsDelta = dmsVal - dmsCtrl;
+	#ifdef DEBUG_MODE
+		printf("DMS Delta: %04d\n", dmsDelta >= 0 ? dmsDelta : 0);
+	#endif
 
-    return (data_t)(dms_val > dms_ctrl + DMS_DELTA);
+    return  (data_t)(dmsDelta > DMS_DELTA_THRESHOLD);
 }
 
 // Checks for gps speed / bms data updates from telemetry
