@@ -37,6 +37,13 @@ class SharedProperty {
 			}
 		}
 
+		void toggle() {
+			_stateMutex.lock();
+			_value = !_value;
+			_stateMutex.unlock();
+			_onValueChanged();
+		}
+
 		T value() {
 			_stateMutex.lock();
 			T ret = _value;

@@ -22,81 +22,104 @@
 
 using namespace util;
 
-class SteeringDisplay {
-	public:
-		enum DynamicGraphicId { Dms, Ignition, Brake, Battery, Soc, Voltage, Speed, Power, Lights, LeftSignal, RightSignal, Minutes, Seconds };
-		SteeringDisplay(SPI_TFT_ILI9341* tft);
-		~SteeringDisplay() { }
-		void initMain();
-		void initMenu();
-		void runMain();
-		void runMenu();
+class SteeringDisplay
+{
+public:
+	enum DynamicGraphicId
+	{
+		Dms,
+		Ignition,
+		Brake,
+		Battery,
+		Soc,
+		Voltage,
+		Speed,
+		Power,
+		Lights,
+		LeftSignal,
+		RightSignal,
+		Minutes,
+		Seconds
+	};
+	SteeringDisplay(SPI_TFT_ILI9341 *tft, SharedProperty<data_t> &menu);
+	~SteeringDisplay() {}
 
-		template <class T>
-		void addDynamicGraphicBinding(SharedProperty<T>& property, DynamicGraphicId id) {
-			Command* command = _getDelegateForGraphicId(id);
-			property.addValueChangedListener(command);
-		}
+	void run();
 
-	private:
-		struct RedrawAction {
-			Shape* shape;
-			void (Shape::*method)(void);
-		};
+	template <class T>
+	void addDynamicGraphicBinding(SharedProperty<T> &property, DynamicGraphicId id)
+	{
+		Command *command = _getDelegateForGraphicId(id);
+		property.addValueChangedListener(command);
+	}
 
-		struct InternalAction {
-			void (SteeringDisplay::*method)(data_t);
-			data_t data;
-		};
+private:
+	struct RedrawAction
+	{
+		Shape *shape;
+		void (Shape::*method)(void);
+	};
 
-		SPI_TFT_ILI9341* _tft;
-		std::unordered_map<DynamicGraphicId, Shape*> _dynamicGraphics;	// id (as index) to dynamic graphics map
-		std::unordered_map<DynamicGraphicId, Animation*> _animations;	// graphic id to timed animation map
-		ThreadedQueue<RedrawAction> _redrawActionQueue;					// queue of actions: main thread adds to this, ui thread executes
-		ThreadedQueue<std::function<void(void)>> _actionQueue;			// queue of generic functions (can include lambdas with captures)
-		Timer _animationTimer;											// timer for animations to keep track of their states
-		steering_time_t _lastTime;
-		// Dynamic Graphics (these are bound to external shared properties)
-		Circle _dmsIcon;
-		Circle _ignitionIcon;
-		Circle _brakeIcon;
-		ScalableRectangle _batteryIcon;
-		Text _batterySocText;
-		Text _batteryVoltageText;
-		Text _speedText;
-		Text _powerText;
-		Text _timeTextMinutes;
-		Text _timeTextSeconds;
-		Bitmap _lights;
-		Bitmap _leftSignal;
-		Bitmap _rightSignal;
-		
-		void _runRedrawQueue();
+	struct InternalAction
+	{
+		void (SteeringDisplay::*method)(data_t);
+		data_t data;
+	};
 
-		// Initialization helpers
-		Command* _getDelegateForGraphicId(DynamicGraphicId id);
-		void _setDynamicGraphic(DynamicGraphicId id, Shape* shape);
-		void _initializeDynamicText(Text* textField, DynamicGraphicId id, int32_t xpos, int32_t ypos, unsigned char* font, std::string str);
+	void initMain();
+	void initMenu();
 
-		// Data changed event callbacks (these are latched to relevant property changed events)
-		void _onDmsChanged(const data_t value);
-		void _onIgnitionChanged(const data_t value);
-		void _onBrakeChanged(const data_t value);
-		void _onBatterySocChanged(const batt_t value);
-		void _onVoltageChanged(const batt_t value);
-		void _onSpeedChanged(const speed_t value);
-		void _onPowerChanged(const throttle_t value);
-		void _onLightsChanged(const data_t value);
-		void _onLeftSignalChanged(const data_t value);
-		void _onRightSignalChanged(const data_t value);
-		void _onTimeChanged(const steering_time_t value);
+	SPI_TFT_ILI9341 *_tft;
+	std::unordered_map<DynamicGraphicId, Shape *> _dynamicGraphics; // id (as index) to dynamic graphics map
+	std::unordered_map<DynamicGraphicId, Animation *> _animations;	// graphic id to timed animation map
+	ThreadedQueue<RedrawAction> _redrawActionQueue;					// queue of actions: main thread adds to this, ui thread executes
+	ThreadedQueue<std::function<void(void)>> _actionQueue;			// queue of generic functions (can include lambdas with captures)
+	Timer _animationTimer;											// timer for animations to keep track of their states
+	steering_time_t _lastTime;
+	// Dynamic Graphics (these are bound to external shared properties)
+	Circle _dmsIcon;
+	Circle _ignitionIcon;
+	Circle _brakeIcon;
+	ScalableRectangle _batteryIcon;
+	Text _batterySocText;
+	Text _batteryVoltageText;
+	Text _speedText;
+	Text _powerText;
+	Text _timeTextMinutes;
+	Text _timeTextSeconds;
+	Bitmap _lights;
+	Bitmap _leftSignal;
+	Bitmap _rightSignal;
 
-		// Data changed helpers
-		void _updateCircleIcon(DynamicGraphicId id, data_t value);
-		void _updateTextField(DynamicGraphicId id, const std::string& value);
-		const std::string _batteryDataToString(const batt_t value);
-		void _handleAnimationChanged(DynamicGraphicId id, bool value);
+	void _runRedrawQueue();
 
+	// Initialization helpers
+	Command *_getDelegateForGraphicId(DynamicGraphicId id);
+	void _setDynamicGraphic(DynamicGraphicId id, Shape *shape);
+	void _initializeDynamicText(Text *textField, DynamicGraphicId id, int32_t xpos, int32_t ypos, unsigned char *font, std::string str);
+
+	// Data changed event callbacks (these are latched to relevant property changed events)
+	void _onDmsChanged(const data_t value);
+	void _onIgnitionChanged(const data_t value);
+	void _onBrakeChanged(const data_t value);
+	void _onBatterySocChanged(const batt_t value);
+	void _onVoltageChanged(const batt_t value);
+	void _onSpeedChanged(const speed_t value);
+	void _onPowerChanged(const throttle_t value);
+	void _onLightsChanged(const data_t value);
+	void _onLeftSignalChanged(const data_t value);
+	void _onRightSignalChanged(const data_t value);
+	void _onTimeChanged(const steering_time_t value);
+
+	// Data changed helpers
+	void _updateCircleIcon(DynamicGraphicId id, data_t value);
+	void _updateTextField(DynamicGraphicId id, const std::string &value);
+	const std::string _batteryDataToString(const batt_t value);
+	void _handleAnimationChanged(DynamicGraphicId id, bool value);
+
+	void _onMenuChanged(const data_t value);
+	bool _menu = false;
+	bool _lastMenu = false;
 };
 
 #endif

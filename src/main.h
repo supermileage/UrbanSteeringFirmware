@@ -22,6 +22,10 @@
 #include "stdio.h"
 #include "mbed.h"
 
+/**
+ * @brief background thread task which updates lcd display
+ */
+void runDisplay();
 
 /**
  * @brief handles all accessories-related tasks
@@ -57,20 +61,9 @@ data_t getDmsVal();
 unsigned char get_throttle_val();
 
 /**
- * @brief background thread task which updates lcd display
- */
-void runSteeringDisplay();
-
-/**
  * @brief reads incoming can messages and updates speed and battery values for display
  */
 void receive_can();
-
-/**
- * @brief Initializes LCD display
- * 
- */
-void initializeDisplay();
 
 /**
  * @brief checks for and handles joystick button actions
