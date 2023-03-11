@@ -129,8 +129,6 @@ int main() {
 		receive_can();
 		updateShiftRegs();
 		setLedState();
-
-
 		blink.set(ledState[HAZARDS_LED]);
 	}
 }
@@ -170,7 +168,6 @@ char read_accessory_inputs(char& hazards){
     } else {
 		turnLeftVal.set(turnLeft);
 		turnRightVal.set(turnRight);
-		//blink.set(false);
 	}
     char dataStr = (wiperVal << 6) | (turnLeftVal.value() << 5) | (turnRightVal.value() << 4) |
 		(hazards << 3) |(horn << 2) | (currentBrake << 1) | lightsVal.value();
