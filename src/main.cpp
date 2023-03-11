@@ -78,7 +78,7 @@ SharedProperty<data_t> turnLeftVal(0);
 SharedProperty<data_t> turnRightVal(0);
 SharedProperty<data_t> prevAccVal(0);
 SharedProperty<data_t> lastGesture(0);
-SharedProperty<data_t> blink(0);	//UPDATE
+SharedProperty<data_t> blink(0);
 SharedProperty<steering_time_t> timeVal(steering_time_t { 0, 0 });
 
 // global variables shared between main and display threads
@@ -100,7 +100,7 @@ void initializeDisplay() {
 	display.addDynamicGraphicBinding(turnLeftVal, SteeringDisplay::LeftSignal);
 	display.addDynamicGraphicBinding(turnRightVal, SteeringDisplay::RightSignal);
 	display.addDynamicGraphicBinding(timeVal, SteeringDisplay::Minutes);
-	display.addDynamicGraphicBinding(blink, SteeringDisplay::Hazards);	//UPDATE
+	display.addDynamicGraphicBinding(blink, SteeringDisplay::Hazards);
 }
 
 int main() {
