@@ -65,7 +65,7 @@ Timer timerAccessories;
 bool lastHazards = false;
 Ticker timerFlash;
 
-bool screen_blink = true;
+bool lastHazardsLed = false;
 Ticker screenBlinker;
 
 // Properties to bind to steering GUI and CAN events
@@ -133,6 +133,7 @@ int main() {
 		receive_can();
 		updateShiftRegs();
 		setLedState();
+		blinkSet();
 	}
 }
 
@@ -169,6 +170,7 @@ char read_accessory_inputs(char& hazards){
 		//turnLeftVal.set(1);
         //turnRightVal.set(1);
 		//blink.set(true);
+		;
     } else {
 		turnLeftVal.set(turnLeft);
 		turnRightVal.set(turnRight);
@@ -280,12 +282,6 @@ void updateShiftRegs() {
 
 void blinkHazardLed() {
 	ledState[HAZARDS_LED] = !ledState[HAZARDS_LED];
-	blink.set(ledState[HAZARDS_LED]);
-}
-
-void blinkHazardAnimation(){
-	blink.set(screen_blink);
-	screen_blink = !screen_blink;
 }
 
 void setLedState() {
@@ -303,6 +299,7 @@ void setLedState() {
 		if(buttonState[HAZARDS_BUTTON]) {
 			timerFlash.attach(blinkHazardLed, 500ms);
 			//screenBlinker.attach(blinkHazardAnimation, 500ms);
+			//blink.set(true);
 			ledState[HAZARDS_LED] = true;
 		} else {
 			timerFlash.detach();
@@ -310,4 +307,11 @@ void setLedState() {
 		}
 		lastHazards = buttonState[HAZARDS_BUTTON];
 	}
+}
+
+void blinkSet(){
+	if(ledState[HAZARDS_LED]!= lastHazardsLed){
+		blink.set(ledState[HAZARDS_LED]);
+	}
+	lastHazardsLed = ledState[HAZARDS_LED];
 }

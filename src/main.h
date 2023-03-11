@@ -83,4 +83,6 @@ void updateShiftRegs();
 
 void blinkHazardLed();
 
+void blinkSet();
+
 #endif
