@@ -33,10 +33,7 @@ SPI_TFT_ILI9341 TFT(D11, D12, D13, D9, D0, A4);
 DigitalOut sdCs(A0);
 CAN can(D10, D2, 500000);
 SteeringDisplay display(&TFT);
-
-#ifdef DEBUG_MODE
-	BufferedSerial pc(USBTX, USBRX); // Uncomment to turn on serial monitor
-#endif	
+//BufferedSerial pc(USBTX, USBRX); // Uncomment to turn on serial monitor
 
 // Accessories
 DigitalIn brake(D1,PullUp);
@@ -80,6 +77,7 @@ SharedProperty<data_t> turnLeftVal(0);
 SharedProperty<data_t> turnRightVal(0);
 SharedProperty<data_t> prevAccVal(0);
 SharedProperty<data_t> lastGesture(0);
+SharedProperty<data_t> blink(0);
 SharedProperty<steering_time_t> timeVal(steering_time_t { 0, 0 });
 
 // global variables shared between main and display threads
@@ -101,6 +99,7 @@ void initializeDisplay() {
 	display.addDynamicGraphicBinding(turnLeftVal, SteeringDisplay::LeftSignal);
 	display.addDynamicGraphicBinding(turnRightVal, SteeringDisplay::RightSignal);
 	display.addDynamicGraphicBinding(timeVal, SteeringDisplay::Minutes);
+	display.addDynamicGraphicBinding(blink, SteeringDisplay::Hazards);
 }
 
 int main() {
@@ -132,6 +131,7 @@ int main() {
 		setLedState();
 
 
+		blink.set(ledState[HAZARDS_LED]);
 	}
 }
 
@@ -165,13 +165,13 @@ char read_accessory_inputs(char& hazards){
 
 	// hazards on == both blinkers turned on at the same time
     if (hazards) {
-		turnLeftVal.set(1);
-        turnRightVal.set(1);
+		turnLeftVal.set(0);
+        turnRightVal.set(0);
     } else {
 		turnLeftVal.set(turnLeft);
 		turnRightVal.set(turnRight);
+		//blink.set(false);
 	}
-
     char dataStr = (wiperVal << 6) | (turnLeftVal.value() << 5) | (turnRightVal.value() << 4) |
 		(hazards << 3) |(horn << 2) | (currentBrake << 1) | lightsVal.value();
     return dataStr;

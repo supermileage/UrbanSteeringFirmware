@@ -226,6 +226,9 @@ Command* SteeringDisplay::_getDelegateForGraphicId(SteeringDisplay::DynamicGraph
 		case SteeringDisplay::Minutes:
 			return new Delegate<SteeringDisplay, steering_time_t>(this, &SteeringDisplay::_onTimeChanged);
 			break;
+		case SteeringDisplay::Hazards:	
+			return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onBlinkChanged);
+			break;
 		default:
 			// do nothing
 			break;
@@ -310,6 +313,23 @@ void SteeringDisplay::_onTimeChanged(const steering_time_t value) {
 		sprintf(buf, "%02d", value.seconds);
 		_updateTextField(SteeringDisplay::Seconds, std::string(buf));
 	}
+}
+
+void SteeringDisplay::_onBlinkChanged(const data_t value) {
+	RedrawAction action_left { &_leftSignal, 0x0 };
+	RedrawAction action_right { &_rightSignal, 0x0 };
+
+	if (value){
+		action_left.method = &Shape::draw;
+		action_right.method = &Shape::draw;
+	}
+	else{
+		action_left.method = &Shape::clear;
+		action_right.method = &Shape::clear;
+	}
+
+	_redrawActionQueue.push(action_left);
+	_redrawActionQueue.push(action_right);
 }
 
 void SteeringDisplay::_updateCircleIcon(DynamicGraphicId id, data_t value) {
