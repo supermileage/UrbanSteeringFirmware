@@ -60,6 +60,10 @@ AnalogIn joyY(A2);
 Timer timerMotor;
 Timer clockResetTimer;
 Timer timerAccessories;
+Timer accessoriesCAN;
+Timer telemetryCAN;
+Timer bmsCAN;
+Timer throttleCAN;
 
 bool lastHazards = false;
 Ticker timerFlash;
@@ -243,16 +247,46 @@ data_t getDmsVal() {
 // Checks for gps speed / bms data updates from telemetry
 void receive_can() {
 	CANMessage msg;
+	accessoriesCAN.start();
+	telemetryCAN.start();
+	bmsCAN.start();
+	throttleCAN.start();
 
 	if (can.read(msg)) {
 		if (msg.id == CAN_TELEMETRY_GPS_DATA) {
 			currentSpeedVal.set((speed_t)msg.data[0]);
+			telemetryCAN.stop();
+			if(telemetryCAN.read_ms() > 500){
+				printf("Telemetry CAN error");
+			}
+			telemetryCAN.reset();
 		} else if (msg.id == CAN_TELEMETRY_BMS_DATA) {
 			batt_t soc, voltage;
 			memcpy((void*)&soc, (void*)msg.data, 4);
 			memcpy((void*)&voltage, (void*)(msg.data + 4), 4);
 			batterySocVal.set(soc);
 			batteryVoltageVal.set(voltage);
+		}
+		if(msg.id == CAN_ACC_STATUS){
+			accessoriesCAN.stop();
+			if(accessoriesCAN.read_ms() > 50){
+				printf("Accessories CAN error");
+			}
+			accessoriesCAN.reset();
+		}
+		if(msg.id == CAN_ORIONBMS_STATUS){
+			bmsCAN.stop();
+			if(bmsCAN.read_ms() > 250){ 
+				printf("BMS CAN error");
+			}
+			bmsCAN.reset();
+		}
+		if(msg.id == THROTTLE_HEARTBEAT){
+			throttleCAN.stop();
+			if(throttleCAN.read_ms() > 250){
+				printf("Throttle CAN error");
+			}
+			throttleCAN.reset();
 		}
 	}
 }
