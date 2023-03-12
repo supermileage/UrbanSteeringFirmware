@@ -259,7 +259,6 @@ void receive_can() {
 			if(telemetryCAN.read_ms() > 500){
 				printf("Telemetry CAN error");
 			}
-			telemetryCAN.reset();
 		} else if (msg.id == CAN_TELEMETRY_BMS_DATA) {
 			batt_t soc, voltage;
 			memcpy((void*)&soc, (void*)msg.data, 4);
@@ -272,22 +271,23 @@ void receive_can() {
 			if(accessoriesCAN.read_ms() > 50){
 				printf("Accessories CAN error");
 			}
-			accessoriesCAN.reset();
 		}
 		if(msg.id == CAN_ORIONBMS_STATUS){
 			bmsCAN.stop();
 			if(bmsCAN.read_ms() > 250){ 
 				printf("BMS CAN error");
 			}
-			bmsCAN.reset();
 		}
 		if(msg.id == THROTTLE_HEARTBEAT){
 			throttleCAN.stop();
 			if(throttleCAN.read_ms() > 250){
 				printf("Throttle CAN error");
 			}
-			throttleCAN.reset();
 		}
+		telemetryCAN.reset();
+		accessoriesCAN.reset();
+		bmsCAN.reset();
+		throttleCAN.reset();
 	}
 }
 
