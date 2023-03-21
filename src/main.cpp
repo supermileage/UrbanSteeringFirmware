@@ -37,9 +37,9 @@ DigitalOut sdCs(A0);
 CAN can(D10, D2, 500000);
 SteeringDisplay display(&TFT);
 
-// #ifdef DEBUG_MODE
+#ifdef DEBUG_MODE
 BufferedSerial pc(USBTX, USBRX); // Uncomment to turn on serial monitor
-// #endif
+#endif
 
 // Accessories
 DigitalIn brake(D1, PullUp);
