@@ -83,7 +83,8 @@ SharedProperty<data_t> turnLeftVal(0);
 SharedProperty<data_t> turnRightVal(0);
 SharedProperty<data_t> prevAccVal(0);
 SharedProperty<data_t> lastGesture(0);
-SharedProperty<steering_time_t> timeVal(steering_time_t{0, 0});
+SharedProperty<data_t> blink(0);
+SharedProperty<steering_time_t> timeVal(steering_time_t { 0, 0 });
 
 // global variables shared between main and display threads
 int64_t g_lastTime = 0;
@@ -105,6 +106,7 @@ void initializeDisplay()
 	display.addDynamicGraphicBinding(turnLeftVal, SteeringDisplay::LeftSignal);
 	display.addDynamicGraphicBinding(turnRightVal, SteeringDisplay::RightSignal);
 	display.addDynamicGraphicBinding(timeVal, SteeringDisplay::Minutes);
+	display.addDynamicGraphicBinding(blink, SteeringDisplay::Hazards);
 }
 
 int main()
@@ -136,6 +138,7 @@ int main()
 		receive_can();
 		updateShiftRegs();
 		setLedState();
+		blink.set(ledState[HAZARDS_LED]);
 	}
 }
 
@@ -173,20 +176,16 @@ char read_accessory_inputs(char &hazards)
 	char wiperVal = buttonState[WIPER_BUTTON];
 
 	// hazards on == both blinkers turned on at the same time
-	if (hazards)
-	{
-		turnLeftVal.set(1);
-		turnRightVal.set(1);
-	}
-	else
-	{
+    if (hazards) {
+		turnLeftVal.set(0);
+        turnRightVal.set(0);
+    } else {
 		turnLeftVal.set(turnLeft);
 		turnRightVal.set(turnRight);
 	}
-
-	char dataStr = (wiperVal << 6) | (turnLeftVal.value() << 5) | (turnRightVal.value() << 4) |
-				   (hazards << 3) | (horn << 2) | (currentBrake << 1) | lightsVal.value();
-	return dataStr;
+    char dataStr = (wiperVal << 6) | (turnLeftVal.value() << 5) | (turnRightVal.value() << 4) |
+		(hazards << 3) |(horn << 2) | (currentBrake << 1) | lightsVal.value();
+    return dataStr;
 }
 
 void handle_motor_inputs()
