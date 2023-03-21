@@ -13,9 +13,9 @@
 #include "main.h"
 
 using namespace std;
-using  namespace std::chrono;
- 
-// #define DEBUG_MODE 
+using namespace std::chrono;
+
+// #define DEBUG_MODE
 #define DMS_DELTA_THRESHOLD 750
 #define MIN_THROTTLE_INPUT 3000
 #define MAX_THROTTLE_INPUT 7000
@@ -29,24 +29,27 @@ using  namespace std::chrono;
 #define MAX_THROTTLE_OUTPUT 255
 #define THROTTLE_RANGE (MAX_THROTTLE_INPUT - MIN_THROTTLE_INPUT)
 
+#define CAN_BATT_SOC_SCALING_FACTOR 2.0
+#define CAN_BATT_VOLTAGE_SCALING_FACTOR 10.0
+
 SPI_TFT_ILI9341 TFT(D11, D12, D13, D9, D0, A4);
 DigitalOut sdCs(A0);
 CAN can(D10, D2, 500000);
 SteeringDisplay display(&TFT);
 
-#ifdef DEBUG_MODE
-	BufferedSerial pc(USBTX, USBRX); // Uncomment to turn on serial monitor
-#endif	
+// #ifdef DEBUG_MODE
+BufferedSerial pc(USBTX, USBRX); // Uncomment to turn on serial monitor
+// #endif
 
 // Accessories
-DigitalIn brake(D1,PullUp);
+DigitalIn brake(D1, PullUp);
 
 // Ready
 AnalogIn dms(A1);
 AnalogIn throttle(A6);
 DigitalOut dmsLed(A5);
 
-//shift registers
+// shift registers
 DigitalOut shiftClk(D3);
 DigitalOut ledOut(D4);
 DigitalOut shiftLatch(D5);
@@ -80,12 +83,13 @@ SharedProperty<data_t> turnLeftVal(0);
 SharedProperty<data_t> turnRightVal(0);
 SharedProperty<data_t> prevAccVal(0);
 SharedProperty<data_t> lastGesture(0);
-SharedProperty<steering_time_t> timeVal(steering_time_t { 0, 0 });
+SharedProperty<steering_time_t> timeVal(steering_time_t{0, 0});
 
 // global variables shared between main and display threads
 int64_t g_lastTime = 0;
 
-void initializeDisplay() {
+void initializeDisplay()
+{
 	// initialize
 	display.init();
 
@@ -103,7 +107,8 @@ void initializeDisplay() {
 	display.addDynamicGraphicBinding(timeVal, SteeringDisplay::Minutes);
 }
 
-int main() {
+int main()
+{
 	timerMotor.start();
 	clockResetTimer.start();
 	timerAccessories.start();
@@ -120,29 +125,32 @@ int main() {
 
 	Thread display_thread;
 	display_thread.start(runSteeringDisplay);
-	
+
 	dmsLed.write(0);
 
-	while (1) {
+	while (1)
+	{
 		handleTime();
 		handle_accessories();
 		handle_motor_inputs();
 		receive_can();
 		updateShiftRegs();
 		setLedState();
-
-
 	}
 }
 
-void handle_accessories() {
-	if (duration_cast<milliseconds>(timerAccessories.elapsed_time()).count() > ACCESSORIES_TRANSMIT_INTERVAL) {
+void handle_accessories()
+{
+	if (duration_cast<milliseconds>(timerAccessories.elapsed_time()).count() > ACCESSORIES_TRANSMIT_INTERVAL)
+	{
 		char hazardsOn;
 		char currentAcc = read_accessory_inputs(hazardsOn);
-		if ((prevAccVal.value() != currentAcc)) {
+		if ((prevAccVal.value() != currentAcc))
+		{
 			// turn hazards off
-			if (hazardsOn) {
-				const unsigned char data[] = { 0x2, 0x4 << 1, 0x5 << 1 };
+			if (hazardsOn)
+			{
+				const unsigned char data[] = {0x2, 0x4 << 1, 0x5 << 1};
 				can.write(CANMessage(CAN_ACC_OPERATION, data, 3));
 				wait_us(1000);
 			}
@@ -154,31 +162,37 @@ void handle_accessories() {
 	}
 }
 
-char read_accessory_inputs(char& hazards){
+char read_accessory_inputs(char &hazards)
+{
 	lightsVal.set(buttonState[LIGHTS_BUTTON]);
 	char currentBrake = (char)(!brake.read());
-    char horn = buttonState[HORN_BUTTON];
-    hazards = buttonState[HAZARDS_BUTTON];
-    char turnLeft = buttonState[IND_LEFT_BUTTON];
-    char turnRight = buttonState[IND_RIGHT_BUTTON];
-    char wiperVal = buttonState[WIPER_BUTTON];
+	char horn = buttonState[HORN_BUTTON];
+	hazards = buttonState[HAZARDS_BUTTON];
+	char turnLeft = buttonState[IND_LEFT_BUTTON];
+	char turnRight = buttonState[IND_RIGHT_BUTTON];
+	char wiperVal = buttonState[WIPER_BUTTON];
 
 	// hazards on == both blinkers turned on at the same time
-    if (hazards) {
+	if (hazards)
+	{
 		turnLeftVal.set(1);
-        turnRightVal.set(1);
-    } else {
+		turnRightVal.set(1);
+	}
+	else
+	{
 		turnLeftVal.set(turnLeft);
 		turnRightVal.set(turnRight);
 	}
 
-    char dataStr = (wiperVal << 6) | (turnLeftVal.value() << 5) | (turnRightVal.value() << 4) |
-		(hazards << 3) |(horn << 2) | (currentBrake << 1) | lightsVal.value();
-    return dataStr;
+	char dataStr = (wiperVal << 6) | (turnLeftVal.value() << 5) | (turnRightVal.value() << 4) |
+				   (hazards << 3) | (horn << 2) | (currentBrake << 1) | lightsVal.value();
+	return dataStr;
 }
 
-void handle_motor_inputs(){
-	if (duration_cast<milliseconds>(timerMotor.elapsed_time()).count() > MOTOR_CONTROLLER_TRANSMIT_INTERVAL) {
+void handle_motor_inputs()
+{
+	if (duration_cast<milliseconds>(timerMotor.elapsed_time()).count() > MOTOR_CONTROLLER_TRANSMIT_INTERVAL)
+	{
 
 		dmsVal.set(getDmsVal());
 		ignitionVal.set(buttonState[IGNITION_BUTTON]);
@@ -186,37 +200,42 @@ void handle_motor_inputs(){
 
 		throttle_t currentThrottle = get_throttle_val();
 
-		if (!dmsVal.value() || !ignitionVal.value() || brakeVal.value()) {
+		if (!dmsVal.value() || !ignitionVal.value() || brakeVal.value())
+		{
 			currentThrottle = 0;
 		}
 
 		throttleVal.set(currentThrottle);
 
 		// Throttle Data
-		const throttle_t throttleData[] = { throttleVal.value() };
+		const throttle_t throttleData[] = {throttleVal.value()};
 		can.write(CANMessage(CAN_STEERING_THROTTLE, throttleData, 1));
 
 		// Ready Data
 		char ready = (brakeVal.value() << 2) | (dmsVal.value() << 1) | ignitionVal.value();
-		const char readyData[] = { ready };
+		const char readyData[] = {ready};
 		can.write(CANMessage(CAN_STEERING_READY, readyData, 1));
 
-        timerMotor.reset();
+		timerMotor.reset();
 	}
 }
 
-throttle_t get_throttle_val() {
+throttle_t get_throttle_val()
+{
 
 	int throttleVal = (int)(throttle.read() * 10000);
 
-	#ifdef DEBUG_MODE
-		printf("Throttle Input: %04d - ", throttleVal);
-	#endif
+#ifdef DEBUG_MODE
+	printf("Throttle Input: %04d - ", throttleVal);
+#endif
 
 	// Keep values within min/max
-	if (throttleVal <= MIN_THROTTLE_INPUT) {
+	if (throttleVal <= MIN_THROTTLE_INPUT)
+	{
 		throttleVal = MIN_THROTTLE_INPUT;
-	} else if (throttleVal >= MAX_THROTTLE_INPUT) {
+	}
+	else if (throttleVal >= MAX_THROTTLE_INPUT)
+	{
 		throttleVal = MAX_THROTTLE_INPUT;
 	}
 
@@ -229,74 +248,90 @@ throttle_t get_throttle_val() {
 	return throttleOut;
 }
 
-data_t getDmsVal() {
+data_t getDmsVal()
+{
 	int dmsCtrl = (int)(dms.read() * 10000);
 	dmsLed.write(1);
 	wait_us(40);
-    int dmsVal = (int)(dms.read() * 10000);
+	int dmsVal = (int)(dms.read() * 10000);
 	dmsLed.write(0);
 	int dmsDelta = dmsVal - dmsCtrl;
-	#ifdef DEBUG_MODE
-		printf("DMS Delta: %04d\n", dmsDelta >= 0 ? dmsDelta : 0);
-	#endif
+#ifdef DEBUG_MODE
+	printf("DMS Delta: %04d\n", dmsDelta >= 0 ? dmsDelta : 0);
+#endif
 
-    return  (data_t)(dmsDelta > DMS_DELTA_THRESHOLD);
+	return (data_t)(dmsDelta > DMS_DELTA_THRESHOLD);
 }
 
-// Checks for gps speed / bms data updates from telemetry
-void receive_can() {
+// Checks for CAN updates
+void receive_can()
+{
 	CANMessage msg;
 
-	if (can.read(msg)) {
-		if (msg.id == CAN_TELEMETRY_GPS_DATA) {
+	if (can.read(msg))
+	{
+		if (msg.id == CAN_TELEMETRY_GPS_DATA)
+		{
 			currentSpeedVal.set((speed_t)msg.data[0]);
-		} else if (msg.id == CAN_TELEMETRY_BMS_DATA) {
-			batt_t soc, voltage;
-			memcpy((void*)&soc, (void*)msg.data, 4);
-			memcpy((void*)&voltage, (void*)(msg.data + 4), 4);
+		}
+		else if (msg.id == CAN_ORIONBMS_PACK)
+		{
+			uint8_t socData = msg.data[4];
+			batt_t soc = socData / CAN_BATT_SOC_SCALING_FACTOR;
 			batterySocVal.set(soc);
+			uint16_t voltageData = msg.data[1] | msg.data[0] << 8;
+			batt_t voltage = voltageData / CAN_BATT_VOLTAGE_SCALING_FACTOR;
 			batteryVoltageVal.set(voltage);
 		}
 	}
 }
 
-void handleTime() {
+void handleTime()
+{
 
-	if(!buttonState[JOYSTICK_BUTTON]) {
+	if (!buttonState[JOYSTICK_BUTTON])
+	{
 		clockResetTimer.reset();
-	} 
+	}
 
-	int64_t currentTime =clockResetTimer.read_ms();
+	int64_t currentTime = clockResetTimer.read_ms();
 
-	timeVal.set(steering_time_t { (int)currentTime / 1000 / 60, (int)currentTime / 1000 % 60 });
+	timeVal.set(steering_time_t{(int)currentTime / 1000 / 60, (int)currentTime / 1000 % 60});
 }
 
-void runSteeringDisplay() {
-	while (1) {
+void runSteeringDisplay()
+{
+	while (1)
+	{
 		display.run();
 	}
 }
 
-void updateShiftRegs() {
+void updateShiftRegs()
+{
 	shiftLatch.write(1);
-    for(int i = 7; i >= 0; i--){
-        buttonState[i] = buttonIn.read();
-        shiftClk.write(1);
-        shiftClk.write(0);
-    }
-    shiftLatch.write(0);
-	for(int i = 8; i >= 0; i--){
-        ledOut.write(!ledState[i]);
-        shiftClk.write(1);
-        shiftClk.write(0);
-    }
+	for (int i = 7; i >= 0; i--)
+	{
+		buttonState[i] = buttonIn.read();
+		shiftClk.write(1);
+		shiftClk.write(0);
+	}
+	shiftLatch.write(0);
+	for (int i = 8; i >= 0; i--)
+	{
+		ledOut.write(!ledState[i]);
+		shiftClk.write(1);
+		shiftClk.write(0);
+	}
 }
 
-void blinkHazardLed() {
+void blinkHazardLed()
+{
 	ledState[HAZARDS_LED] = !ledState[HAZARDS_LED];
 }
 
-void setLedState() {
+void setLedState()
+{
 	// Set wiper LED
 	ledState[WIPER_LED] = buttonState[WIPER_BUTTON];
 	// Set lights LED
@@ -307,11 +342,15 @@ void setLedState() {
 	ledState[IGNITION_OFF_LED] = !buttonState[IGNITION_BUTTON];
 	ledState[IGNITION_ON_LED] = buttonState[IGNITION_BUTTON];
 	// Flash Hazards LED
-	if(buttonState[HAZARDS_BUTTON] != lastHazards) {
-		if(buttonState[HAZARDS_BUTTON]) {
+	if (buttonState[HAZARDS_BUTTON] != lastHazards)
+	{
+		if (buttonState[HAZARDS_BUTTON])
+		{
 			timerFlash.attach(blinkHazardLed, 500ms);
 			ledState[HAZARDS_LED] = true;
-		} else {
+		}
+		else
+		{
 			timerFlash.detach();
 			ledState[HAZARDS_LED] = false;
 		}
