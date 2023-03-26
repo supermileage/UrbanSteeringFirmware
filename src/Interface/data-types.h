@@ -1,3 +1,5 @@
+#pragma once
+
 /* macro for shared property type */
 #define batt_t float
 #define data_t char
