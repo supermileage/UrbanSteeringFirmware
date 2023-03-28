@@ -18,10 +18,17 @@
 #define BRAKE_X						55
 #define STATUS_Y 					5
 #define CIRCLE_RADIUS 				10
+#define CIRCLE_RADIUS_CAN 			5
 #define CIRCLE_Y_OFFSET 			CIRCLE_RADIUS * 3
 #define CIRCLE_X_OFFSET_DMS  		14
 #define CIRCLE_X_OFFSET_IGNITION  	15
 #define CIRCLE_X_OFFSET_BRAKE  		14
+
+#define CAN_X						280
+#define CAN_X_OFFSET				30
+#define CAN_TELEMETRY_Y				180
+#define CAN_TELEMETRY_Y_OFFSET		4 //CIRCLE_RADIUS_CAN * 3
+
 
 // voltage
 #define BATTERY_TEXT_X 		260
@@ -111,6 +118,15 @@ void SteeringDisplay::init() {
 	_tft->printf("BRK");
 	_brakeIcon.init(_tft, BRAKE_X + CIRCLE_X_OFFSET_BRAKE, CIRCLE_Y_OFFSET, Green, CIRCLE_RADIUS, true);
 	_setDynamicGraphic(SteeringDisplay::Brake, &_brakeIcon);
+
+
+	//CAN telemetry
+	_tft->locate(CAN_X, CAN_TELEMETRY_Y);
+	_tft->printf("Tel");
+	_canTelemetryIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_TELEMETRY_Y + CAN_TELEMETRY_Y_OFFSET, Red, CIRCLE_RADIUS_CAN, true);
+	_setDynamicGraphic(SteeringDisplay::Telemetry, &_canTelemetryIcon);
+
+
 
 	// Battery icon w/ static outline graphic
 	_tft->rect(BATTERY_LEFT_X, BATTERY_LEFT_Y, BATTERY_LEFT_X + BATTERY_WIDTH, BATTERY_LEFT_Y + BATTERY_HEIGHT, White);
