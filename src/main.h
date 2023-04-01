@@ -21,6 +21,7 @@
 
 #include "stdio.h"
 #include "mbed.h"
+#include "SteeringDisplay.h"
 
 
 /**
