@@ -108,14 +108,17 @@ void SteeringDisplay::init() {
     _dmsIcon.init(_tft, DMS_X + CIRCLE_X_OFFSET_DMS, CIRCLE_Y_OFFSET, Red, CIRCLE_RADIUS, true);
     _setDynamicGraphic(SteeringDisplay::Dms, &_dmsIcon);
 
+    // Ignition
+    _tft->locate(IGNITION_X, STATUS_Y);
+    _tft->printf("RUN");
+    _ignitionIcon.init(_tft, IGNITION_X + CIRCLE_X_OFFSET_IGNITION, CIRCLE_Y_OFFSET, Red, CIRCLE_RADIUS, true);
+    _setDynamicGraphic(SteeringDisplay::Ignition, &_ignitionIcon);
 
 	//CAN telemetry
 	_tft->locate(CAN_X, CAN_TELEMETRY_Y);
 	_tft->printf("Tel");
 	_canTelemetryIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_TELEMETRY_Y + CAN_TELEMETRY_Y_OFFSET, Red, CIRCLE_RADIUS_CAN, true);
 	_setDynamicGraphic(SteeringDisplay::Telemetry, &_canTelemetryIcon);
-
-
 
 	// Battery icon w/ static outline graphic
 	_tft->rect(BATTERY_LEFT_X, BATTERY_LEFT_Y, BATTERY_LEFT_X + BATTERY_WIDTH, BATTERY_LEFT_Y + BATTERY_HEIGHT, White);
