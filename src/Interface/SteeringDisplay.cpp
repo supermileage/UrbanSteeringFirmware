@@ -120,25 +120,25 @@ void SteeringDisplay::init() {
 	//CAN telemetry
 	_tft->locate(CAN_X + 1, CAN_TELEMETRY_Y);
 	_tft->printf("Tel");
-	_canTelemetryIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_TELEMETRY_Y + CAN_TELEMETRY_Y_OFFSET, Red, CIRCLE_RADIUS_CAN, true);
+	_canTelemetryIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_TELEMETRY_Y + CAN_TELEMETRY_Y_OFFSET, Green, CIRCLE_RADIUS_CAN, true);
 	_setDynamicGraphic(SteeringDisplay::Telemetry, &_canTelemetryIcon);
 
 	//CAN accessories
 	_tft->locate(CAN_X, CAN_ACCESSORIES_Y);
 	_tft->printf("Acc");
-	_canAccessoriesIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_ACCESSORIES_Y + CAN_TELEMETRY_Y_OFFSET, Red, CIRCLE_RADIUS_CAN, true);
+	_canAccessoriesIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_ACCESSORIES_Y + CAN_TELEMETRY_Y_OFFSET, Green, CIRCLE_RADIUS_CAN, true);
 	_setDynamicGraphic(SteeringDisplay::Accessories, &_canAccessoriesIcon);
 
 	//CAN bms
 	_tft->locate(CAN_X - 6, CAN_BMS_Y);
 	_tft->printf("Bms");
-	_canBmsIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_BMS_Y + CAN_TELEMETRY_Y_OFFSET, Red, CIRCLE_RADIUS_CAN, true);
+	_canBmsIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_BMS_Y + CAN_TELEMETRY_Y_OFFSET, Green, CIRCLE_RADIUS_CAN, true);
 	_setDynamicGraphic(SteeringDisplay::Bms, &_canBmsIcon);
 
 	//CAN bms
 	_tft->locate(CAN_X, CAN_THROTTLE_Y);
 	_tft->printf("Thr");
-	_canThrottleIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_THROTTLE_Y + CAN_TELEMETRY_Y_OFFSET, Red, CIRCLE_RADIUS_CAN, true);
+	_canThrottleIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_THROTTLE_Y + CAN_TELEMETRY_Y_OFFSET, Green, CIRCLE_RADIUS_CAN, true);
 	_setDynamicGraphic(SteeringDisplay::Throttle, &_canThrottleIcon);
 
 	// Battery icon w/ static outline graphic
@@ -309,7 +309,7 @@ void SteeringDisplay::_onBrakeChanged(const data_t value) {
 }
 
 void SteeringDisplay::_onCanTelNotDetected(const data_t value) {
-    _updateCircleIcon(SteeringDisplay::Telemetry, value);
+    _updateCanCircleIcon(SteeringDisplay::Telemetry, value);
 }
 
 void SteeringDisplay::_onBatterySocChanged(const batt_t value) {
@@ -388,6 +388,12 @@ void SteeringDisplay::_onTimeChanged(const steering_time_t value) {
 void SteeringDisplay::_updateCircleIcon(DynamicGraphicId id, data_t value) {
     auto& circle = _dynamicGraphics[id];
     circle->setColour(int32_t(value ? Green : Red));
+    _redrawActionQueue.push(RedrawAction{circle, &Shape::draw});
+}
+
+void SteeringDisplay::_updateCanCircleIcon(DynamicGraphicId id, data_t value) {
+    auto& circle = _dynamicGraphics[id];
+    circle->setColour(int32_t(value ? Red : Green));
     _redrawActionQueue.push(RedrawAction{circle, &Shape::draw});
 }
 

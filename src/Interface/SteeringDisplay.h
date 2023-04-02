@@ -99,6 +99,7 @@ class SteeringDisplay {
 
 		// Data changed helpers
 		void _updateCircleIcon(DynamicGraphicId id, data_t value);
+		void _updateCanCircleIcon(DynamicGraphicId id, data_t value);
 		void _updateTextField(DynamicGraphicId id, const std::string& value);
 		const std::string _batteryDataToString(const batt_t value);
 		void _handleAnimationChanged(DynamicGraphicId id, bool value);
