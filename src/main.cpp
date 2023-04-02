@@ -134,6 +134,7 @@ int main() {
 		updateShiftRegs();
 		setLedState();
 		blink.set(ledState[HAZARDS_LED]);
+		canErrorCheck();
 	}
 }
 
@@ -255,41 +256,38 @@ void receive_can() {
 	if (can.read(msg)) {
 		if (msg.id == CAN_TELEMETRY_GPS_DATA) {
 			currentSpeedVal.set((speed_t)msg.data[0]);
+			//telemetryCAN.reset();
 			telemetryCAN.stop();
-			if(telemetryCAN.read_ms() > 500){
-				printf("Telemetry CAN error");
-				//telemetryCAN.reset();
+			printf("received tel in %d\n", telemetryCAN.read_ms());
+			telemetryCAN.reset();
 			}
-		} else if (msg.id == CAN_TELEMETRY_BMS_DATA) {
+		if (msg.id == CAN_TELEMETRY_BMS_DATA) {
 			batt_t soc, voltage;
 			memcpy((void*)&soc, (void*)msg.data, 4);
 			memcpy((void*)&voltage, (void*)(msg.data + 4), 4);
 			batterySocVal.set(soc);
 			batteryVoltageVal.set(voltage);
 		}
-		else if(msg.id == CAN_ACC_STATUS){
+		if(msg.id == CAN_ACC_STATUS){
+			//accessoriesCAN.reset();
 			accessoriesCAN.stop();
-			if(accessoriesCAN.read_ms() > 50){
-				printf("Accessories CAN error");
-				//accessoriesCAN.reset();
-			}
+			printf("received acc in %d\n", accessoriesCAN.read_ms());
+			accessoriesCAN.reset();
 		}
-		else if(msg.id == CAN_ORIONBMS_STATUS){
+		if(msg.id == CAN_ORIONBMS_STATUS){
+			//bmsCAN.reset();
 			bmsCAN.stop();
-			if(bmsCAN.read_ms() > 250){ 
-				printf("BMS CAN error");
-				//bmsCAN.reset();
-			}
+			printf("received bms in %d\n", bmsCAN.read_ms());
+			bmsCAN.reset();
 		}
-		else if(msg.id == THROTTLE_HEARTBEAT){
+		if(msg.id == THROTTLE_HEARTBEAT){
+			//throttleCAN.reset();
 			throttleCAN.stop();
-			if(throttleCAN.read_ms() > 250){
-				printf("Throttle CAN error");
-				//throttleCAN.reset();
-			}
+			printf("received throttle in %d\n", throttleCAN.read_ms());
+			throttleCAN.reset();
 		}
 
-		switch(msg.id){
+	/*	switch(msg.id){
 			case CAN_TELEMETRY_GPS_DATA:
 				telemetryCAN.reset();
 				telemetryCAN.start();
@@ -309,6 +307,7 @@ void receive_can() {
 			default:
 				break;
 		}
+	}*/
 	}
 }
 
@@ -368,5 +367,20 @@ void setLedState() {
 			ledState[HAZARDS_LED] = false;
 		}
 		lastHazards = buttonState[HAZARDS_BUTTON];
+	}
+}
+
+void canErrorCheck(){
+	if (telemetryCAN.read_ms() > 1000){
+		printf("Telemetry error\n");
+	}
+	//if (accessoriesCAN.read_ms() > 1000){
+	//	printf("Accessories error\n");
+	//}
+	if (bmsCAN.read_ms() > 1000){
+		printf("BMS error\n");
+	}
+	if (throttleCAN.read_ms() > 2000){
+		printf("Throttle error\n");
 	}
 }
