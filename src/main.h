@@ -84,4 +84,6 @@ void updateShiftRegs();
 
 void blinkHazardLed();
 
+void canErrorCheck();
+
 #endif
