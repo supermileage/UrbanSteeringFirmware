@@ -168,16 +168,20 @@ char read_accessory_inputs(char &hazards) {
     char turnRight = buttonState[IND_RIGHT_BUTTON];
     char wiperVal = buttonState[WIPER_BUTTON];
 
-    // hazards on == both blinkers turned on at the same time
     if (hazards) {
-        turnLeftVal.set(0);
-        turnRightVal.set(0);
+        turnLeftVal.set(1);
+        turnRightVal.set(1);
     } else {
         turnLeftVal.set(turnLeft);
         turnRightVal.set(turnRight);
     }
     char dataStr = (wiperVal << 6) | (turnLeftVal.value() << 5) | (turnRightVal.value() << 4) |
                    (hazards << 3) | (horn << 2) | (currentBrake << 1) | lightsVal.value();
+
+    if (hazards) {
+        turnLeftVal.set(0);
+        turnRightVal.set(0);
+    }
     return dataStr;
 }
 
