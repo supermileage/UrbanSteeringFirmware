@@ -28,6 +28,9 @@
 #define CAN_X						280
 #define CAN_X_OFFSET				30
 #define CAN_TELEMETRY_Y				180
+#define CAN_ACCESSORIES_Y			195
+#define CAN_BMS_Y					210
+#define CAN_THROTTLE_Y				225
 #define CAN_TELEMETRY_Y_OFFSET		4 //CIRCLE_RADIUS_CAN * 3
 
 
@@ -115,10 +118,28 @@ void SteeringDisplay::init() {
     _setDynamicGraphic(SteeringDisplay::Ignition, &_ignitionIcon);
 
 	//CAN telemetry
-	_tft->locate(CAN_X, CAN_TELEMETRY_Y);
+	_tft->locate(CAN_X + 1, CAN_TELEMETRY_Y);
 	_tft->printf("Tel");
 	_canTelemetryIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_TELEMETRY_Y + CAN_TELEMETRY_Y_OFFSET, Red, CIRCLE_RADIUS_CAN, true);
 	_setDynamicGraphic(SteeringDisplay::Telemetry, &_canTelemetryIcon);
+
+	//CAN accessories
+	_tft->locate(CAN_X, CAN_ACCESSORIES_Y);
+	_tft->printf("Acc");
+	_canAccessoriesIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_ACCESSORIES_Y + CAN_TELEMETRY_Y_OFFSET, Red, CIRCLE_RADIUS_CAN, true);
+	_setDynamicGraphic(SteeringDisplay::Accessories, &_canAccessoriesIcon);
+
+	//CAN bms
+	_tft->locate(CAN_X - 6, CAN_BMS_Y);
+	_tft->printf("Bms");
+	_canBmsIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_BMS_Y + CAN_TELEMETRY_Y_OFFSET, Red, CIRCLE_RADIUS_CAN, true);
+	_setDynamicGraphic(SteeringDisplay::Bms, &_canBmsIcon);
+
+	//CAN bms
+	_tft->locate(CAN_X, CAN_THROTTLE_Y);
+	_tft->printf("Thr");
+	_canThrottleIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_THROTTLE_Y + CAN_TELEMETRY_Y_OFFSET, Red, CIRCLE_RADIUS_CAN, true);
+	_setDynamicGraphic(SteeringDisplay::Throttle, &_canThrottleIcon);
 
 	// Battery icon w/ static outline graphic
 	_tft->rect(BATTERY_LEFT_X, BATTERY_LEFT_Y, BATTERY_LEFT_X + BATTERY_WIDTH, BATTERY_LEFT_Y + BATTERY_HEIGHT, White);
@@ -224,6 +245,9 @@ Command* SteeringDisplay::_getDelegateForGraphicId(SteeringDisplay::DynamicGraph
         case SteeringDisplay::Brake:
             return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onBrakeChanged);
             break;
+		case SteeringDisplay::Telemetry:
+            return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onCanTelNotDetected);
+            break;
         case SteeringDisplay::Battery:
             // Battery icon is updated with new soc / voltage data
             break;
@@ -282,6 +306,10 @@ void SteeringDisplay::_onIgnitionChanged(const data_t value) {
 
 void SteeringDisplay::_onBrakeChanged(const data_t value) {
     _updateCircleIcon(SteeringDisplay::Brake, !value);
+}
+
+void SteeringDisplay::_onCanTelNotDetected(const data_t value) {
+    _updateCircleIcon(SteeringDisplay::Telemetry, value);
 }
 
 void SteeringDisplay::_onBatterySocChanged(const batt_t value) {

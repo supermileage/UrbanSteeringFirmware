@@ -79,6 +79,10 @@ Ticker timerFlash;
 SharedProperty<data_t> dmsVal(0);
 SharedProperty<data_t> ignitionVal(0);
 SharedProperty<data_t> brakeVal(0);
+
+SharedProperty<data_t> telemetryCanVal(0);
+
+
 SharedProperty<batt_t> batterySocVal(0);
 SharedProperty<batt_t> batteryVoltageVal(0);
 SharedProperty<speed_t> currentSpeedVal(0);
@@ -102,6 +106,7 @@ void initializeDisplay() {
     display.addDynamicGraphicBinding(dmsVal, SteeringDisplay::Dms);
     display.addDynamicGraphicBinding(ignitionVal, SteeringDisplay::Ignition);
     display.addDynamicGraphicBinding(brakeVal, SteeringDisplay::Brake);
+	display.addDynamicGraphicBinding(telemetryCanVal, SteeringDisplay::Telemetry);
     display.addDynamicGraphicBinding(batterySocVal, SteeringDisplay::Soc);
     display.addDynamicGraphicBinding(batteryVoltageVal, SteeringDisplay::Voltage);
     display.addDynamicGraphicBinding(currentSpeedVal, SteeringDisplay::Speed);
@@ -141,6 +146,8 @@ int main() {
         updateShiftRegs();
         setLedState();
         blink.set(ledState[HAZARDS_LED]);
+		if(buttonState[HORN_BUTTON] ==1) telemetryCanVal.set(1);
+		else telemetryCanVal.set(0);
     }
 }
 
