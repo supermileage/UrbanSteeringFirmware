@@ -72,6 +72,10 @@ Ticker timerFlash;
 SharedProperty<data_t> dmsVal(0);
 SharedProperty<data_t> ignitionVal(0);
 SharedProperty<data_t> brakeVal(0);
+SharedProperty<data_t> telemetryCanVal(0);
+SharedProperty<data_t> accessoriesCanVal(0);
+SharedProperty<data_t> bmsCanVal(0);
+SharedProperty<data_t> throttleCanVal(0);
 SharedProperty<batt_t> batterySocVal(0);
 SharedProperty<batt_t> batteryVoltageVal(0);
 SharedProperty<speed_t> currentSpeedVal(0);
@@ -95,6 +99,10 @@ void initializeDisplay() {
 	display.addDynamicGraphicBinding(dmsVal, SteeringDisplay::Dms);
 	display.addDynamicGraphicBinding(ignitionVal, SteeringDisplay::Ignition);
 	display.addDynamicGraphicBinding(brakeVal, SteeringDisplay::Brake);
+	display.addDynamicGraphicBinding(telemetryCanVal, SteeringDisplay::Telemetry);
+	display.addDynamicGraphicBinding(accessoriesCanVal, SteeringDisplay::Accessories);
+	display.addDynamicGraphicBinding(bmsCanVal, SteeringDisplay::Bms);
+	display.addDynamicGraphicBinding(throttleCanVal, SteeringDisplay::Throttle);
 	display.addDynamicGraphicBinding(batterySocVal, SteeringDisplay::Soc);
 	display.addDynamicGraphicBinding(batteryVoltageVal, SteeringDisplay::Voltage);
 	display.addDynamicGraphicBinding(currentSpeedVal, SteeringDisplay::Speed);
@@ -135,6 +143,18 @@ int main() {
 		setLedState();
 		blink.set(ledState[HAZARDS_LED]);
 		canErrorCheck();
+		if(buttonState[HORN_BUTTON] == 1) {
+			telemetryCanVal.set(1);
+			accessoriesCanVal.set(1);
+			bmsCanVal.set(1);
+			throttleCanVal.set(1);
+		}
+		else {
+			telemetryCanVal.set(0);
+			accessoriesCanVal.set(0);
+			bmsCanVal.set(0);
+			throttleCanVal.set(0);
+		}
 	}
 }
 
@@ -373,14 +393,17 @@ void setLedState() {
 void canErrorCheck(){
 	if (telemetryCAN.read_ms() > 1000){
 		printf("Telemetry error\n");
+		//telemetryCanVal.set(1);
 	}
 	//if (accessoriesCAN.read_ms() > 1000){
 	//	printf("Accessories error\n");
 	//}
 	if (bmsCAN.read_ms() > 1000){
 		printf("BMS error\n");
+		//bmsCanVal.set(1);
 	}
 	if (throttleCAN.read_ms() > 2000){
 		printf("Throttle error\n");
+		//throttleCanVal.set(1);
 	}
 }

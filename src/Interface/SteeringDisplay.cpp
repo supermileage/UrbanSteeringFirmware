@@ -248,6 +248,15 @@ Command* SteeringDisplay::_getDelegateForGraphicId(SteeringDisplay::DynamicGraph
 		case SteeringDisplay::Telemetry:
             return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onCanTelNotDetected);
             break;
+        case SteeringDisplay::Accessories:
+            return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onCanAccNotDetected);
+            break;
+        case SteeringDisplay::Bms:
+            return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onCanBmsNotDetected);
+            break;
+        case SteeringDisplay::Throttle:
+            return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onCanThrottleNotDetected);
+            break;
         case SteeringDisplay::Battery:
             // Battery icon is updated with new soc / voltage data
             break;
@@ -310,6 +319,18 @@ void SteeringDisplay::_onBrakeChanged(const data_t value) {
 
 void SteeringDisplay::_onCanTelNotDetected(const data_t value) {
     _updateCanCircleIcon(SteeringDisplay::Telemetry, value);
+}
+
+void SteeringDisplay::_onCanAccNotDetected(const data_t value) {
+    _updateCanCircleIcon(SteeringDisplay::Accessories, value);
+}
+
+void SteeringDisplay::_onCanBmsNotDetected(const data_t value) {
+    _updateCanCircleIcon(SteeringDisplay::Bms, value);
+}
+
+void SteeringDisplay::_onCanThrottleNotDetected(const data_t value) {
+    _updateCanCircleIcon(SteeringDisplay::Throttle, value);
 }
 
 void SteeringDisplay::_onBatterySocChanged(const batt_t value) {

@@ -87,6 +87,9 @@ class SteeringDisplay {
 		void _onIgnitionChanged(const data_t value);
 		void _onBrakeChanged(const data_t value);
 		void _onCanTelNotDetected(const data_t value);
+		void _onCanAccNotDetected(const data_t value);
+		void _onCanBmsNotDetected(const data_t value);
+		void _onCanThrottleNotDetected(const data_t value);
 		void _onBatterySocChanged(const batt_t value);
 		void _onVoltageChanged(const batt_t value);
 		void _onSpeedChanged(const speed_t value);
