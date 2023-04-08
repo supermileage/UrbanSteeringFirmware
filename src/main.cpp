@@ -18,8 +18,8 @@ using namespace std::chrono;
 
 // #define DEBUG_MODE
 #define DMS_DELTA_THRESHOLD 750
-#define MIN_THROTTLE_INPUT 3000
-#define MAX_THROTTLE_INPUT 7000
+#define MIN_THROTTLE_INPUT 5500
+#define MAX_THROTTLE_INPUT 9500
 
 #define ACCESSORIES_TRANSMIT_INTERVAL 50
 #define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 50
@@ -193,7 +193,7 @@ void handle_motor_inputs() {
 
         throttle_t currentThrottle = get_throttle_val();
 
-        if (!dmsVal.value() || !ignitionVal.value() || brakeVal.value()) {
+        if (!ignitionVal.value()) {
             currentThrottle = 0;
         }
 
@@ -213,7 +213,7 @@ void handle_motor_inputs() {
 }
 
 throttle_t get_throttle_val() {
-    int throttleVal = (int)(throttle.read() * 10000);
+    int throttleVal = (int)(joyY.read() * 10000);
 
 #ifdef DEBUG_MODE
     printf("Throttle Input: %04d - ", throttleVal);
