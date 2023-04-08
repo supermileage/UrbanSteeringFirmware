@@ -27,8 +27,7 @@
 
 #define CAN_X						280
 #define CAN_X_OFFSET				30
-#define CAN_TELEMETRY_Y				180
-#define CAN_ACCESSORIES_Y			195
+#define CAN_TELEMETRY_Y				195
 #define CAN_BMS_Y					210
 #define CAN_THROTTLE_Y				225
 #define CAN_TELEMETRY_Y_OFFSET		4 //CIRCLE_RADIUS_CAN * 3
@@ -118,20 +117,20 @@ void SteeringDisplay::init() {
     _setDynamicGraphic(SteeringDisplay::Ignition, &_ignitionIcon);
 
 	//CAN telemetry
-	_tft->locate(CAN_X + 1, CAN_TELEMETRY_Y);
-	_tft->printf("Tel");
+	_tft->locate(CAN_X , CAN_TELEMETRY_Y);
+	_tft->printf("TEL");
 	_canTelemetryIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_TELEMETRY_Y + CAN_TELEMETRY_Y_OFFSET, Green, CIRCLE_RADIUS_CAN, true);
 	_setDynamicGraphic(SteeringDisplay::Telemetry, &_canTelemetryIcon);
 
 	//CAN bms
-	_tft->locate(CAN_X - 6, CAN_BMS_Y);
-	_tft->printf("Bms");
+	_tft->locate(CAN_X, CAN_BMS_Y);
+	_tft->printf("BAT");
 	_canBmsIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_BMS_Y + CAN_TELEMETRY_Y_OFFSET, Green, CIRCLE_RADIUS_CAN, true);
 	_setDynamicGraphic(SteeringDisplay::Bms, &_canBmsIcon);
 
 	//CAN bms
 	_tft->locate(CAN_X, CAN_THROTTLE_Y);
-	_tft->printf("Thr");
+	_tft->printf("MC");
 	_canThrottleIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_THROTTLE_Y + CAN_TELEMETRY_Y_OFFSET, Green, CIRCLE_RADIUS_CAN, true);
 	_setDynamicGraphic(SteeringDisplay::Throttle, &_canThrottleIcon);
 
