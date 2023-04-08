@@ -123,12 +123,6 @@ void SteeringDisplay::init() {
 	_canTelemetryIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_TELEMETRY_Y + CAN_TELEMETRY_Y_OFFSET, Green, CIRCLE_RADIUS_CAN, true);
 	_setDynamicGraphic(SteeringDisplay::Telemetry, &_canTelemetryIcon);
 
-	//CAN accessories
-	_tft->locate(CAN_X, CAN_ACCESSORIES_Y);
-	_tft->printf("Acc");
-	_canAccessoriesIcon.init(_tft, CAN_X + CAN_X_OFFSET, CAN_ACCESSORIES_Y + CAN_TELEMETRY_Y_OFFSET, Green, CIRCLE_RADIUS_CAN, true);
-	_setDynamicGraphic(SteeringDisplay::Accessories, &_canAccessoriesIcon);
-
 	//CAN bms
 	_tft->locate(CAN_X - 6, CAN_BMS_Y);
 	_tft->printf("Bms");
@@ -248,9 +242,6 @@ Command* SteeringDisplay::_getDelegateForGraphicId(SteeringDisplay::DynamicGraph
 		case SteeringDisplay::Telemetry:
             return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onCanTelNotDetected);
             break;
-        case SteeringDisplay::Accessories:
-            return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onCanAccNotDetected);
-            break;
         case SteeringDisplay::Bms:
             return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onCanBmsNotDetected);
             break;
@@ -319,10 +310,6 @@ void SteeringDisplay::_onBrakeChanged(const data_t value) {
 
 void SteeringDisplay::_onCanTelNotDetected(const data_t value) {
     _updateCanCircleIcon(SteeringDisplay::Telemetry, value);
-}
-
-void SteeringDisplay::_onCanAccNotDetected(const data_t value) {
-    _updateCanCircleIcon(SteeringDisplay::Accessories, value);
 }
 
 void SteeringDisplay::_onCanBmsNotDetected(const data_t value) {

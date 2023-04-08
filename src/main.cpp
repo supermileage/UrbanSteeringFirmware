@@ -73,7 +73,6 @@ SharedProperty<data_t> dmsVal(0);
 SharedProperty<data_t> ignitionVal(0);
 SharedProperty<data_t> brakeVal(0);
 SharedProperty<data_t> telemetryCanVal(0);
-SharedProperty<data_t> accessoriesCanVal(0);
 SharedProperty<data_t> bmsCanVal(0);
 SharedProperty<data_t> throttleCanVal(0);
 SharedProperty<batt_t> batterySocVal(0);
@@ -100,7 +99,6 @@ void initializeDisplay() {
 	display.addDynamicGraphicBinding(ignitionVal, SteeringDisplay::Ignition);
 	display.addDynamicGraphicBinding(brakeVal, SteeringDisplay::Brake);
 	display.addDynamicGraphicBinding(telemetryCanVal, SteeringDisplay::Telemetry);
-	display.addDynamicGraphicBinding(accessoriesCanVal, SteeringDisplay::Accessories);
 	display.addDynamicGraphicBinding(bmsCanVal, SteeringDisplay::Bms);
 	display.addDynamicGraphicBinding(throttleCanVal, SteeringDisplay::Throttle);
 	display.addDynamicGraphicBinding(batterySocVal, SteeringDisplay::Soc);
@@ -287,11 +285,6 @@ void receive_can() {
 			batterySocVal.set(soc);
 			batteryVoltageVal.set(voltage);
 		}
-		if(msg.id == CAN_ACC_STATUS){
-			accessoriesCAN.stop();
-			printf("received acc in %d\n", accessoriesCAN.read_ms());
-			accessoriesCAN.reset();
-		}
 		if(msg.id == CAN_ORIONBMS_STATUS){
 			bmsCAN.stop();
 			printf("received bms in %d\n", bmsCAN.read_ms());
@@ -368,10 +361,6 @@ void canErrorCheck(){
 	if (telemetryCAN.read_ms() > 1000){
 		//printf("Telemetry error\n");
 		telemetryCanVal.set(1);
-	}
-	if (accessoriesCAN.read_ms() > 1000){
-		//printf("Accessories error\n");
-		accessoriesCanVal.set(1);
 	}
 	if (bmsCAN.read_ms() > 1000){
 		//printf("BMS error\n");
