@@ -143,7 +143,7 @@ int main() {
 		setLedState();
 		blink.set(ledState[HAZARDS_LED]);
 		canErrorCheck();
-		if(buttonState[HORN_BUTTON] == 1) {
+		/*if(buttonState[HORN_BUTTON] == 1) {
 			telemetryCanVal.set(1);
 			accessoriesCanVal.set(1);
 			bmsCanVal.set(1);
@@ -154,7 +154,7 @@ int main() {
 			accessoriesCanVal.set(0);
 			bmsCanVal.set(0);
 			throttleCanVal.set(0);
-		}
+		}*/
 	}
 }
 
@@ -276,7 +276,6 @@ void receive_can() {
 	if (can.read(msg)) {
 		if (msg.id == CAN_TELEMETRY_GPS_DATA) {
 			currentSpeedVal.set((speed_t)msg.data[0]);
-			//telemetryCAN.reset();
 			telemetryCAN.stop();
 			printf("received tel in %d\n", telemetryCAN.read_ms());
 			telemetryCAN.reset();
@@ -289,45 +288,20 @@ void receive_can() {
 			batteryVoltageVal.set(voltage);
 		}
 		if(msg.id == CAN_ACC_STATUS){
-			//accessoriesCAN.reset();
 			accessoriesCAN.stop();
 			printf("received acc in %d\n", accessoriesCAN.read_ms());
 			accessoriesCAN.reset();
 		}
 		if(msg.id == CAN_ORIONBMS_STATUS){
-			//bmsCAN.reset();
 			bmsCAN.stop();
 			printf("received bms in %d\n", bmsCAN.read_ms());
 			bmsCAN.reset();
 		}
 		if(msg.id == THROTTLE_HEARTBEAT){
-			//throttleCAN.reset();
 			throttleCAN.stop();
 			printf("received throttle in %d\n", throttleCAN.read_ms());
 			throttleCAN.reset();
 		}
-
-	/*	switch(msg.id){
-			case CAN_TELEMETRY_GPS_DATA:
-				telemetryCAN.reset();
-				telemetryCAN.start();
-				break;
-			case CAN_ACC_STATUS:
-				accessoriesCAN.reset();
-				accessoriesCAN.start();
-				break;
-			case CAN_ORIONBMS_STATUS:
-				bmsCAN.reset();
-				bmsCAN.start();
-				break;
-			case THROTTLE_HEARTBEAT:
-				throttleCAN.reset();
-				throttleCAN.start();
-				break;
-			default:
-				break;
-		}
-	}*/
 	}
 }
 
@@ -392,18 +366,19 @@ void setLedState() {
 
 void canErrorCheck(){
 	if (telemetryCAN.read_ms() > 1000){
-		printf("Telemetry error\n");
-		//telemetryCanVal.set(1);
+		//printf("Telemetry error\n");
+		telemetryCanVal.set(1);
 	}
-	//if (accessoriesCAN.read_ms() > 1000){
-	//	printf("Accessories error\n");
-	//}
+	if (accessoriesCAN.read_ms() > 1000){
+		//printf("Accessories error\n");
+		accessoriesCanVal.set(1);
+	}
 	if (bmsCAN.read_ms() > 1000){
-		printf("BMS error\n");
-		//bmsCanVal.set(1);
+		//printf("BMS error\n");
+		bmsCanVal.set(1);
 	}
 	if (throttleCAN.read_ms() > 2000){
-		printf("Throttle error\n");
-		//throttleCanVal.set(1);
+		//printf("Throttle error\n");
+		throttleCanVal.set(1);
 	}
 }
