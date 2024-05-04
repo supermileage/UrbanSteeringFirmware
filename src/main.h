@@ -11,6 +11,9 @@
 #define IGNITION_BUTTON 6
 #define HAZARDS_BUTTON 7
 
+#define ESHIFT_UP 8
+#define ESHIFT_DOWN 9
+
 //LED definitions
 #define WIPER_LED 1
 #define LIGHTS_LED 2
@@ -41,7 +44,7 @@ char read_accessory_inputs(char& hazardsVal);
  * to motor controller with throttle data, and another to telemetry indicating states of ignition, dms, etc..
  * 
  */
-void handle_motor_inputs();
+void handle_motor_inputs(int &eshift);
 
 /**
  * @brief Read dead man's switch

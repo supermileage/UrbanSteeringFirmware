@@ -26,7 +26,7 @@ using namespace util;
 
 class SteeringDisplay {
 	public:
-		enum DynamicGraphicId { Dms, Ignition, Brake, Battery, Soc, Voltage, Speed, Power, Lights, LeftSignal, RightSignal, Minutes, Seconds, Hazards };
+		enum DynamicGraphicId { Dms, Ignition, Brake, Battery, Soc, Voltage, eShift, Speed, Power, Rpm, Lights, LeftSignal, RightSignal, Minutes, Seconds, Hazards };
 		SteeringDisplay(SPI_TFT_ILI9341* tft);
 		~SteeringDisplay() { }
 		void init();
@@ -63,8 +63,10 @@ class SteeringDisplay {
 		ScalableRectangle _batteryIcon;
 		Text _batterySocText;
 		Text _batteryVoltageText;
+		Text _eShiftText;
 		Text _speedText;
 		Text _powerText;
+		Text _rpmText;
 		Text _timeTextMinutes;
 		Text _timeTextSeconds;
 		Bitmap _lights;
@@ -84,8 +86,10 @@ class SteeringDisplay {
 		void _onBrakeChanged(const data_t value);
 		void _onBatterySocChanged(const batt_t value);
 		void _onVoltageChanged(const batt_t value);
+		void _onEShiftChanged(const eshift_t value);
 		void _onSpeedChanged(const speed_t value);
 		void _onPowerChanged(const throttle_t value);
+		void _onRpmChanged(const rpm_t value);
 		void _onLightsChanged(const data_t value);
 		void _onLeftSignalChanged(const data_t value);
 		void _onRightSignalChanged(const data_t value);

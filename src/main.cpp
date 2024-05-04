@@ -45,6 +45,7 @@ BufferedSerial pc(USBTX, USBRX);
 // Accessories
 DigitalIn brake(D1, PullUp);
 
+
 // Ready
 AnalogIn dms(A1);
 AnalogIn throttle(A6);
@@ -57,7 +58,7 @@ DigitalOut shiftLatch(D5);
 DigitalIn buttonIn(D6);
 
 // shift reg
-bool buttonState[8] = {};
+bool buttonState[8] = {}; 
 bool ledState[8] = {};
 
 // Joystick
@@ -79,6 +80,8 @@ SharedProperty<batt_t> batterySocVal(0);
 SharedProperty<batt_t> batteryVoltageVal(0);
 SharedProperty<speed_t> currentSpeedVal(0);
 SharedProperty<throttle_t> throttleVal(0);
+SharedProperty<rpm_t> rpmVal(0);
+SharedProperty<eshift_t> eShiftVal(0);
 SharedProperty<data_t> lightsVal(0);
 SharedProperty<data_t> turnLeftVal(0);
 SharedProperty<data_t> turnRightVal(0);
@@ -89,6 +92,8 @@ SharedProperty<steering_time_t> timeVal(steering_time_t{0, 0});
 
 // global variables shared between main and display threads
 int64_t g_lastTime = 0;
+int counter = 0;
+int eshift = 1;
 
 void initializeDisplay() {
     // initialize
@@ -102,6 +107,8 @@ void initializeDisplay() {
     display.addDynamicGraphicBinding(batteryVoltageVal, SteeringDisplay::Voltage);
     display.addDynamicGraphicBinding(currentSpeedVal, SteeringDisplay::Speed);
     display.addDynamicGraphicBinding(throttleVal, SteeringDisplay::Power);
+    display.addDynamicGraphicBinding(rpmVal, SteeringDisplay::Rpm);
+    display.addDynamicGraphicBinding(eShiftVal, SteeringDisplay::eShift);
     display.addDynamicGraphicBinding(lightsVal, SteeringDisplay::Lights);
     display.addDynamicGraphicBinding(turnLeftVal, SteeringDisplay::LeftSignal);
     display.addDynamicGraphicBinding(turnRightVal, SteeringDisplay::RightSignal);
@@ -132,7 +139,7 @@ int main() {
     while (1) {
         handleTime();
         handle_accessories();
-        handle_motor_inputs();
+        handle_motor_inputs(eshift);
         receive_can();
         updateShiftRegs();
         setLedState();
@@ -185,7 +192,7 @@ char read_accessory_inputs(char &hazards) {
     return dataStr;
 }
 
-void handle_motor_inputs() {
+void handle_motor_inputs(int &eshift) {
     if (duration_cast<milliseconds>(timerMotor.elapsed_time()).count() > MOTOR_CONTROLLER_TRANSMIT_INTERVAL) {
         dmsVal.set(getDmsVal());
         ignitionVal.set(buttonState[IGNITION_BUTTON]);
@@ -197,10 +204,50 @@ void handle_motor_inputs() {
             currentThrottle = 0;
         }
 
+        if(buttonState[IND_LEFT_BUTTON]){
+            eshift++;
+        }
+
+        if(buttonState[IND_RIGHT_BUTTON]){
+            eshift--;
+        }
+        
+        // Limit eshift range
+        if(eshift < 1){
+            eshift = 1;
+        } else if(eshift > 5){
+            eshift = 5;
+        } 
+
+        // eShift value is displayed
+        eShiftVal.set(eshift);
+
+        // eShift modulates the range of throttle provided to the motor controller
+        // switch(5){
+        //     case 1:
+        //         currentThrottle = currentThrottle/5;
+        //         break;
+        //     case 2:
+        //         currentThrottle = currentThrottle/4;
+        //         break;
+        //     case 3:
+        //         currentThrottle = currentThrottle/3;
+        //         break;
+        //     case 4:
+        //         currentThrottle = currentThrottle/2;
+        //         break;
+        //     case 5:
+        //         currentThrottle = currentThrottle;
+        //         break;
+        //     default:
+        //         currentThrottle = 0;
+        //         break;
+        // }
+
         throttleVal.set(currentThrottle);
 
         // Throttle Data
-        const throttle_t throttleData[] = {throttleVal.value()};
+        const throttle_t throttleData[] = {throttleVal.value()}; 
         can.write(CANMessage(CAN_STEERING_THROTTLE, throttleData, 1));
 
         // Ready Data
@@ -256,6 +303,12 @@ void receive_can() {
     if (can.read(msg)) {
         if (msg.id == CAN_TELEMETRY_GPS_DATA) {
             currentSpeedVal.set((speed_t)msg.data[0]);
+            
+        } else if(msg.id == CAN_MOTOR_RPM) {   
+            // Reconstruct the integer value from the byte array
+            int rpm =(msg.data[0] << 8) | msg.data[1];
+            rpmVal.set(rpm);
+            
         } else if (msg.id == CAN_ORIONBMS_PACK) {
             uint8_t socData = msg.data[4];
             batt_t soc = socData / CAN_BATT_SOC_SCALING_FACTOR;
@@ -263,7 +316,8 @@ void receive_can() {
             uint16_t voltageData = msg.data[1] | msg.data[0] << 8;
             batt_t voltage = voltageData / CAN_BATT_VOLTAGE_SCALING_FACTOR;
             batteryVoltageVal.set(voltage);
-        }
+        } 
+        
     }
 }
 
