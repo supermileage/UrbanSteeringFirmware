@@ -17,12 +17,12 @@ using namespace std;
 using namespace std::chrono;
 
 // #define DEBUG_MODE
-#define DMS_DELTA_THRESHOLD 750
+#define DMS_DELTA_THRESHOLD 500
 #define MIN_THROTTLE_INPUT 3000
 #define MAX_THROTTLE_INPUT 7000
 
 #define ACCESSORIES_TRANSMIT_INTERVAL 50
-#define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 50
+#define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 100
 #define DEBOUNCE_TIME 50
 #define GESTURE_MARGIN 500
 
@@ -94,6 +94,7 @@ SharedProperty<steering_time_t> timeVal(steering_time_t{0, 0});
 int64_t g_lastTime = 0;
 int counter = 0;
 int eshift = 1;
+int prev_state = 0; // 0 neutral, 1 up, -1 down
 
 void initializeDisplay() {
     // initialize
@@ -139,7 +140,7 @@ int main() {
     while (1) {
         handleTime();
         handle_accessories();
-        handle_motor_inputs(eshift);
+        handle_motor_inputs(eshift, prev_state);
         receive_can();
         updateShiftRegs();
         setLedState();
@@ -192,7 +193,7 @@ char read_accessory_inputs(char &hazards) {
     return dataStr;
 }
 
-void handle_motor_inputs(int &eshift) {
+void handle_motor_inputs(int &eshift, int &prev_state) {
     if (duration_cast<milliseconds>(timerMotor.elapsed_time()).count() > MOTOR_CONTROLLER_TRANSMIT_INTERVAL) {
         dmsVal.set(getDmsVal());
         ignitionVal.set(buttonState[IGNITION_BUTTON]);
@@ -204,13 +205,27 @@ void handle_motor_inputs(int &eshift) {
             currentThrottle = 0;
         }
 
-        if(buttonState[IND_LEFT_BUTTON]){
-            eshift++;
+        int curr_state;
+        int Joystick_x = (int)(joyX.read()*10000);
+        // printf("voltage= %04d\n",Joystick_x);
+
+        if (Joystick_x > 9000){
+            curr_state = -1;
+        } else if( Joystick_x < 1000){
+            curr_state = 1;
+        } else{
+            curr_state = 0;
         }
 
-        if(buttonState[IND_RIGHT_BUTTON]){
-            eshift--;
+        if (prev_state == 0){
+            if(curr_state == 1){
+                eshift++;
+            } else if(curr_state == -1){
+                eshift--;
+            }
         }
+        
+        prev_state = curr_state;
         
         // Limit eshift range
         if(eshift < 1){
@@ -223,26 +238,26 @@ void handle_motor_inputs(int &eshift) {
         eShiftVal.set(eshift);
 
         // eShift modulates the range of throttle provided to the motor controller
-        // switch(5){
-        //     case 1:
-        //         currentThrottle = currentThrottle/5;
-        //         break;
-        //     case 2:
-        //         currentThrottle = currentThrottle/4;
-        //         break;
-        //     case 3:
-        //         currentThrottle = currentThrottle/3;
-        //         break;
-        //     case 4:
-        //         currentThrottle = currentThrottle/2;
-        //         break;
-        //     case 5:
-        //         currentThrottle = currentThrottle;
-        //         break;
-        //     default:
-        //         currentThrottle = 0;
-        //         break;
-        // }
+        switch(eshift){
+            case 1:
+                currentThrottle = currentThrottle/5;
+                break;
+            case 2:
+                currentThrottle = currentThrottle/2.5;
+                break;
+            case 3:
+                currentThrottle = currentThrottle/1.66;
+                break;
+            case 4:
+                currentThrottle = currentThrottle/1.25;
+                break;
+            case 5:
+                currentThrottle = currentThrottle;
+                break;
+            default:
+                currentThrottle = 0;
+                break;
+        }
 
         throttleVal.set(currentThrottle);
 
@@ -301,13 +316,15 @@ void receive_can() {
     CANMessage msg;
 
     if (can.read(msg)) {
-        if (msg.id == CAN_TELEMETRY_GPS_DATA) {
-            currentSpeedVal.set((speed_t)msg.data[0]);
+        // if (msg.id == CAN_TELEMETRY_GPS_DATA) {
+        //     currentSpeedVal.set((speed_t)msg.data[0]);
             
-        } else if(msg.id == CAN_MOTOR_RPM) {   
+        // } else 
+        if(msg.id == CAN_MOTOR_RPM) {   
             // Reconstruct the integer value from the byte array
             int rpm =(msg.data[0] << 8) | msg.data[1];
             rpmVal.set(rpm);
+            currentSpeedVal.set(rpm/16/3);
             
         } else if (msg.id == CAN_ORIONBMS_PACK) {
             uint8_t socData = msg.data[4];
