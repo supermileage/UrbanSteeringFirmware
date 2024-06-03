@@ -45,7 +45,6 @@ storage/kvstore
 storage/platform
 
 platform/tests
-TEST_APPS
 TESTS
 UNITTESTS
 
