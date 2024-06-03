@@ -218,11 +218,7 @@ void handle_motor_inputs(int &eshift, int &prev_state) {
         }
 
         if (prev_state == 0){
-            if(curr_state == 1){
-                eshift++;
-            } else if(curr_state == -1){
-                eshift--;
-            }
+            eshift += curr_state;
         }
         
         prev_state = curr_state;
@@ -316,10 +312,6 @@ void receive_can() {
     CANMessage msg;
 
     if (can.read(msg)) {
-        // if (msg.id == CAN_TELEMETRY_GPS_DATA) {
-        //     currentSpeedVal.set((speed_t)msg.data[0]);
-            
-        // } else 
         if(msg.id == CAN_MOTOR_RPM) {   
             // Reconstruct the integer value from the byte array
             int rpm =(msg.data[0] << 8) | msg.data[1];
@@ -334,7 +326,6 @@ void receive_can() {
             batt_t voltage = voltageData / CAN_BATT_VOLTAGE_SCALING_FACTOR;
             batteryVoltageVal.set(voltage);
         } 
-        
     }
 }
 

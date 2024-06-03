@@ -8,6 +8,7 @@
 #include "graphics.h"
 
 /* Display Macros */
+// #define DISPLAY_RPM
 
 // fonts
 #define SMALL_FONT Arial12x12
@@ -147,8 +148,10 @@ void SteeringDisplay::init() {
     _tft->printf("PWR");
     _tft->locate(TIME_X_LABEL, TIME_Y_LABEL);
     _tft->printf("TIME");
-    // _tft->locate(RPM_X_LABEL, RPM_Y_LABEL);
-    // _tft->printf("RPM");
+    #ifdef DISPLAY_RPM
+    _tft->locate(RPM_X_LABEL, RPM_Y_LABEL);
+    _tft->printf("RPM");
+    #endif
 
     /* Cool Font Graphics */
     _tft->set_font((unsigned char*)COOL_FONT);
@@ -164,9 +167,11 @@ void SteeringDisplay::init() {
     _initializeDynamicText(&_powerText, SteeringDisplay::Power, POWER_X, POWER_Y, (unsigned char*)COOL_FONT, "000");
 
     // Rpm
+    #ifdef DISPLAY_RPM
     // _tft->locate(RPM_X + RPM_X_UNIT_OFFSET, RPM_Y);
     // _tft->printf("RPM");
     // _initializeDynamicText(&_rpmText, SteeringDisplay::Rpm, RPM_X, RPM_Y, (unsigned char*)COOL_FONT, "0000");
+    #endif
 
     // EShift
     _tft->rect(ESHIFT_BOX_X, ESHIFT_BOX_Y, ESHIFT_BOX_X + ESHIFT_BOX_X_WIDTH, ESHIFT_BOX_Y + ESHIFT_BOX_Y_HEIGHT, White);

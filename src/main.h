@@ -11,9 +11,6 @@
 #define IGNITION_BUTTON 6
 #define HAZARDS_BUTTON 7
 
-#define ESHIFT_UP 8
-#define ESHIFT_DOWN 9
-
 //LED definitions
 #define WIPER_LED 1
 #define LIGHTS_LED 2
