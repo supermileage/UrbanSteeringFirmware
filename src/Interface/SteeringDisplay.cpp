@@ -8,6 +8,7 @@
 #include "graphics.h"
 
 /* Display Macros */
+// #define DISPLAY_RPM
 
 // fonts
 #define SMALL_FONT Arial12x12
@@ -41,27 +42,34 @@
 #define BATTERY_BTN_WIDTH 2
 #define BATTERY_BTN_HEIGHT 10
 
+// rpm
+#define RPM_X_LABEL 15
+#define RPM_Y_LABEL 103
+#define RPM_X 50
+#define RPM_X_UNIT_OFFSET 140
+#define RPM_Y 85
+
 // speed
 #define SPEED_X_LABEL 50
-#define SPEED_Y_LABEL 103
+#define SPEED_Y_LABEL 143
 #define SPEED_X 80
 #define SPEED_X_UNIT_OFFSET 110
-#define SPEED_Y 85
+#define SPEED_Y 125
 
 // power
 #define POWER_X_LABEL 48
-#define POWER_Y_LABEL 153
+#define POWER_Y_LABEL 183
 #define POWER_X 80
 #define POWER_X_UNIT_OFFSET 110
-#define POWER_Y 135
+#define POWER_Y 165
 
 // time
 #define TIME_X_LABEL 46
-#define TIME_Y_LABEL 203
+#define TIME_Y_LABEL 223
 #define MINUTES_X 80
 #define COLON_X 160
 #define SECONDS_X 185
-#define TIME_Y 185
+#define TIME_Y 205
 
 // throttle debug
 #define THROTTLE_RAW_X 10
@@ -71,16 +79,25 @@
 #define TURN_FLASHING_INTERVAL 500
 #define TURN_WIDTH 30
 #define TURN_HEIGHT 30
-#define TURN_LEFT_X 10
-#define TURN_LEFT_Y 55
-#define TURN_RIGHT_X 280
-#define TURN_RIGHT_Y 60
+#define TURN_LEFT_X 30
+#define TURN_LEFT_Y 50
+#define TURN_RIGHT_X 260
+#define TURN_RIGHT_Y 50
 
 // lights
 #define LIGHTS_X 140
-#define LIGHTS_Y 55
+#define LIGHTS_Y 48
 #define LIGHTS_WIDTH 40
 #define LIGHTS_HEIGHT 30
+
+// e-shift
+#define ESHIFT_X 160
+#define ESHIFT_X_UNIT_OFFSET 30
+#define ESHIFT_Y 85
+#define ESHIFT_BOX_X 120
+#define ESHIFT_BOX_X_WIDTH 82
+#define ESHIFT_BOX_Y 83
+#define ESHIFT_BOX_Y_HEIGHT 40
 
 SteeringDisplay::SteeringDisplay(SPI_TFT_ILI9341* tft) : _tft(tft) {
     _animationTimer.start();
@@ -131,19 +148,37 @@ void SteeringDisplay::init() {
     _tft->printf("PWR");
     _tft->locate(TIME_X_LABEL, TIME_Y_LABEL);
     _tft->printf("TIME");
+    #ifdef DISPLAY_RPM
+    _tft->locate(RPM_X_LABEL, RPM_Y_LABEL);
+    _tft->printf("RPM");
+    #endif
 
     /* Cool Font Graphics */
     _tft->set_font((unsigned char*)COOL_FONT);
 
     // Speed
-
     _tft->locate(SPEED_X + SPEED_X_UNIT_OFFSET, SPEED_Y);
     _tft->printf("K/H");
     _initializeDynamicText(&_speedText, SteeringDisplay::Speed, SPEED_X, SPEED_Y, (unsigned char*)COOL_FONT, "00");
+
     // Throttle
     _tft->locate(POWER_X + POWER_X_UNIT_OFFSET, POWER_Y);
     _tft->printf("%%");
     _initializeDynamicText(&_powerText, SteeringDisplay::Power, POWER_X, POWER_Y, (unsigned char*)COOL_FONT, "000");
+
+    // Rpm
+    #ifdef DISPLAY_RPM
+    // _tft->locate(RPM_X + RPM_X_UNIT_OFFSET, RPM_Y);
+    // _tft->printf("RPM");
+    // _initializeDynamicText(&_rpmText, SteeringDisplay::Rpm, RPM_X, RPM_Y, (unsigned char*)COOL_FONT, "0000");
+    #endif
+
+    // EShift
+    _tft->rect(ESHIFT_BOX_X, ESHIFT_BOX_Y, ESHIFT_BOX_X + ESHIFT_BOX_X_WIDTH, ESHIFT_BOX_Y + ESHIFT_BOX_Y_HEIGHT, White);
+    _tft->locate(ESHIFT_X - ESHIFT_X_UNIT_OFFSET, ESHIFT_Y);
+    _tft->printf("S");
+    _initializeDynamicText(&_eShiftText, SteeringDisplay::eShift, ESHIFT_X, ESHIFT_Y, (unsigned char*)COOL_FONT, "1");
+
     // Time
     _tft->locate(COLON_X, TIME_Y);
     _tft->printf(":");
@@ -209,11 +244,17 @@ Command* SteeringDisplay::_getDelegateForGraphicId(SteeringDisplay::DynamicGraph
         case SteeringDisplay::Voltage:
             return new Delegate<SteeringDisplay, batt_t>(this, &SteeringDisplay::_onVoltageChanged);
             break;
+        case SteeringDisplay::eShift:
+            return new Delegate<SteeringDisplay, eshift_t>(this, &SteeringDisplay::_onEShiftChanged);
+            break;
         case SteeringDisplay::Speed:
             return new Delegate<SteeringDisplay, speed_t>(this, &SteeringDisplay::_onSpeedChanged);
             break;
         case SteeringDisplay::Power:
             return new Delegate<SteeringDisplay, throttle_t>(this, &SteeringDisplay::_onPowerChanged);
+            break;
+        case SteeringDisplay::Rpm:
+            return new Delegate<SteeringDisplay,rpm_t>(this, &SteeringDisplay::_onRpmChanged);
             break;
         case SteeringDisplay::Lights:
             return new Delegate<SteeringDisplay, data_t>(this, &SteeringDisplay::_onLightsChanged);
@@ -270,6 +311,12 @@ void SteeringDisplay::_onVoltageChanged(const batt_t value) {
     _updateTextField(SteeringDisplay::Voltage, _batteryDataToString(value));
 }
 
+void SteeringDisplay::_onEShiftChanged(const eshift_t value) {
+    char buf[2]={};
+    sprintf(buf,"%01u", value);
+    _updateTextField(SteeringDisplay::eShift, std::string(buf));
+}
+
 void SteeringDisplay::_onSpeedChanged(const speed_t value) {
     char buf[4] = {};
     sprintf(buf, "%02u", value);
@@ -280,6 +327,12 @@ void SteeringDisplay::_onPowerChanged(const throttle_t value) {
     char buf[4] = {};
     sprintf(buf, "%03u", (value * 100) / 255);
     _updateTextField(SteeringDisplay::Power, std::string(buf));
+}
+
+void SteeringDisplay::_onRpmChanged(const rpm_t value){
+    char buf[5] = {};
+    sprintf(buf,"%04u", value);
+    _updateTextField(SteeringDisplay::Rpm,std::string(buf));
 }
 
 void SteeringDisplay::_onLightsChanged(const data_t value) {

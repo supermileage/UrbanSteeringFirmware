@@ -17,12 +17,12 @@ using namespace std;
 using namespace std::chrono;
 
 // #define DEBUG_MODE
-#define DMS_DELTA_THRESHOLD 750
+#define DMS_DELTA_THRESHOLD 500
 #define MIN_THROTTLE_INPUT 3000
 #define MAX_THROTTLE_INPUT 7000
 
 #define ACCESSORIES_TRANSMIT_INTERVAL 50
-#define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 50
+#define MOTOR_CONTROLLER_TRANSMIT_INTERVAL 100
 #define DEBOUNCE_TIME 50
 #define GESTURE_MARGIN 500
 
@@ -45,6 +45,7 @@ BufferedSerial pc(USBTX, USBRX);
 // Accessories
 DigitalIn brake(D1, PullUp);
 
+
 // Ready
 AnalogIn dms(A1);
 AnalogIn throttle(A6);
@@ -57,7 +58,7 @@ DigitalOut shiftLatch(D5);
 DigitalIn buttonIn(D6);
 
 // shift reg
-bool buttonState[8] = {};
+bool buttonState[8] = {}; 
 bool ledState[8] = {};
 
 // Joystick
@@ -79,6 +80,8 @@ SharedProperty<batt_t> batterySocVal(0);
 SharedProperty<batt_t> batteryVoltageVal(0);
 SharedProperty<speed_t> currentSpeedVal(0);
 SharedProperty<throttle_t> throttleVal(0);
+SharedProperty<rpm_t> rpmVal(0);
+SharedProperty<eshift_t> eShiftVal(0);
 SharedProperty<data_t> lightsVal(0);
 SharedProperty<data_t> turnLeftVal(0);
 SharedProperty<data_t> turnRightVal(0);
@@ -89,6 +92,9 @@ SharedProperty<steering_time_t> timeVal(steering_time_t{0, 0});
 
 // global variables shared between main and display threads
 int64_t g_lastTime = 0;
+int counter = 0;
+int eshift = 1;
+int prev_state = 0; // 0 neutral, 1 up, -1 down
 
 void initializeDisplay() {
     // initialize
@@ -102,6 +108,8 @@ void initializeDisplay() {
     display.addDynamicGraphicBinding(batteryVoltageVal, SteeringDisplay::Voltage);
     display.addDynamicGraphicBinding(currentSpeedVal, SteeringDisplay::Speed);
     display.addDynamicGraphicBinding(throttleVal, SteeringDisplay::Power);
+    display.addDynamicGraphicBinding(rpmVal, SteeringDisplay::Rpm);
+    display.addDynamicGraphicBinding(eShiftVal, SteeringDisplay::eShift);
     display.addDynamicGraphicBinding(lightsVal, SteeringDisplay::Lights);
     display.addDynamicGraphicBinding(turnLeftVal, SteeringDisplay::LeftSignal);
     display.addDynamicGraphicBinding(turnRightVal, SteeringDisplay::RightSignal);
@@ -132,7 +140,7 @@ int main() {
     while (1) {
         handleTime();
         handle_accessories();
-        handle_motor_inputs();
+        handle_motor_inputs(eshift, prev_state);
         receive_can();
         updateShiftRegs();
         setLedState();
@@ -185,7 +193,7 @@ char read_accessory_inputs(char &hazards) {
     return dataStr;
 }
 
-void handle_motor_inputs() {
+void handle_motor_inputs(int &eshift, int &prev_state) {
     if (duration_cast<milliseconds>(timerMotor.elapsed_time()).count() > MOTOR_CONTROLLER_TRANSMIT_INTERVAL) {
         dmsVal.set(getDmsVal());
         ignitionVal.set(buttonState[IGNITION_BUTTON]);
@@ -197,10 +205,60 @@ void handle_motor_inputs() {
             currentThrottle = 0;
         }
 
+        int curr_state;
+        int Joystick_x = (int)(joyX.read()*10000);
+        // printf("voltage= %04d\n",Joystick_x);
+
+        if (Joystick_x > 9000){
+            curr_state = -1;
+        } else if( Joystick_x < 1000){
+            curr_state = 1;
+        } else{
+            curr_state = 0;
+        }
+
+        if (prev_state == 0){
+            eshift += curr_state;
+        }
+        
+        prev_state = curr_state;
+        
+        // Limit eshift range
+        if(eshift < 1){
+            eshift = 1;
+        } else if(eshift > 5){
+            eshift = 5;
+        } 
+
+        // eShift value is displayed
+        eShiftVal.set(eshift);
+
+        // eShift modulates the range of throttle provided to the motor controller
+        switch(eshift){
+            case 1:
+                currentThrottle = currentThrottle/5;
+                break;
+            case 2:
+                currentThrottle = currentThrottle/2.5;
+                break;
+            case 3:
+                currentThrottle = currentThrottle/1.66;
+                break;
+            case 4:
+                currentThrottle = currentThrottle/1.25;
+                break;
+            case 5:
+                currentThrottle = currentThrottle;
+                break;
+            default:
+                currentThrottle = 0;
+                break;
+        }
+
         throttleVal.set(currentThrottle);
 
         // Throttle Data
-        const throttle_t throttleData[] = {throttleVal.value()};
+        const throttle_t throttleData[] = {throttleVal.value()}; 
         can.write(CANMessage(CAN_STEERING_THROTTLE, throttleData, 1));
 
         // Ready Data
@@ -254,8 +312,12 @@ void receive_can() {
     CANMessage msg;
 
     if (can.read(msg)) {
-        if (msg.id == CAN_TELEMETRY_GPS_DATA) {
-            currentSpeedVal.set((speed_t)msg.data[0]);
+        if(msg.id == CAN_MOTOR_RPM) {   
+            // Reconstruct the integer value from the byte array
+            int rpm =(msg.data[0] << 8) | msg.data[1];
+            rpmVal.set(rpm);
+            currentSpeedVal.set(rpm/16/3);
+            
         } else if (msg.id == CAN_ORIONBMS_PACK) {
             uint8_t socData = msg.data[4];
             batt_t soc = socData / CAN_BATT_SOC_SCALING_FACTOR;
@@ -263,7 +325,7 @@ void receive_can() {
             uint16_t voltageData = msg.data[1] | msg.data[0] << 8;
             batt_t voltage = voltageData / CAN_BATT_VOLTAGE_SCALING_FACTOR;
             batteryVoltageVal.set(voltage);
-        }
+        } 
     }
 }
 

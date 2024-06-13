@@ -41,7 +41,7 @@ char read_accessory_inputs(char& hazardsVal);
  * to motor controller with throttle data, and another to telemetry indicating states of ignition, dms, etc..
  * 
  */
-void handle_motor_inputs();
+void handle_motor_inputs(int &eshift,int &previous_x);
 
 /**
  * @brief Read dead man's switch
