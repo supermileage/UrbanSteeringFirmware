@@ -41,6 +41,13 @@
 #define BATTERY_BTN_WIDTH 2
 #define BATTERY_BTN_HEIGHT 10
 
+// current
+#define CURRENT_X_LABEL 50
+#define CURRENT_Y_LABEL 103
+#define CURRENT_X 80
+#define CURRENT_X_UNIT_OFFSET 110
+#define CURRENT_Y 85
+
 // speed
 #define SPEED_X_LABEL 50
 #define SPEED_Y_LABEL 103
@@ -125,6 +132,8 @@ void SteeringDisplay::init() {
     _initializeDynamicText(&_batteryVoltageText, SteeringDisplay::Voltage, BATTERY_TEXT_X, VOLTAGE_TEXT_Y, (unsigned char*)SMALL_FONT, "00.0 V");
 
     // Cool Font Graphics Labels
+    _tft->locate(CURRENT_X_LABEL, CURRENT_Y_LABEL);
+    _tft->printf("CURRENT");
     _tft->locate(SPEED_X_LABEL, SPEED_Y_LABEL);
     _tft->printf("SPD");
     _tft->locate(POWER_X_LABEL, POWER_Y_LABEL);
@@ -135,8 +144,11 @@ void SteeringDisplay::init() {
     /* Cool Font Graphics */
     _tft->set_font((unsigned char*)COOL_FONT);
 
+    // Current
+    _tft->locate(CURRENT_X + CURRENT_X_UNIT_OFFSET, CURRENT_Y);
+    _tft->printf("A");
+    _initializeDynamicText(&_currentText, SteeringDisplay::Current, CURRENT_X, CURRENT_Y, (unsigned char*)COOL_FONT, "00");
     // Speed
-
     _tft->locate(SPEED_X + SPEED_X_UNIT_OFFSET, SPEED_Y);
     _tft->printf("K/H");
     _initializeDynamicText(&_speedText, SteeringDisplay::Speed, SPEED_X, SPEED_Y, (unsigned char*)COOL_FONT, "00");
@@ -209,6 +221,9 @@ Command* SteeringDisplay::_getDelegateForGraphicId(SteeringDisplay::DynamicGraph
         case SteeringDisplay::Voltage:
             return new Delegate<SteeringDisplay, batt_t>(this, &SteeringDisplay::_onVoltageChanged);
             break;
+        case SteeringDisplay::Current:
+            return new Delegate<SteeringDisplay, batt_t>(this, &SteeringDisplay::_onCurrentChanged);
+            break;
         case SteeringDisplay::Speed:
             return new Delegate<SteeringDisplay, speed_t>(this, &SteeringDisplay::_onSpeedChanged);
             break;
@@ -268,6 +283,10 @@ void SteeringDisplay::_onBatterySocChanged(const batt_t value) {
 
 void SteeringDisplay::_onVoltageChanged(const batt_t value) {
     _updateTextField(SteeringDisplay::Voltage, _batteryDataToString(value));
+}
+
+void SteeringDisplay::_onCurrentChanged(const batt_t value) {
+    _updateTextField(SteeringDisplay::Current, _batteryDataToString(value));
 }
 
 void SteeringDisplay::_onSpeedChanged(const speed_t value) {

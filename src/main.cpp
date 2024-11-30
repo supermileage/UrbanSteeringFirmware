@@ -76,6 +76,7 @@ SharedProperty<data_t> dmsVal(0);
 SharedProperty<data_t> ignitionVal(0);
 SharedProperty<data_t> brakeVal(0);
 SharedProperty<batt_t> batterySocVal(0);
+SharedProperty<batt_t> currentVal(0);
 SharedProperty<batt_t> batteryVoltageVal(0);
 SharedProperty<speed_t> currentSpeedVal(0);
 SharedProperty<throttle_t> throttleVal(0);
@@ -100,6 +101,7 @@ void initializeDisplay() {
     display.addDynamicGraphicBinding(brakeVal, SteeringDisplay::Brake);
     display.addDynamicGraphicBinding(batterySocVal, SteeringDisplay::Soc);
     display.addDynamicGraphicBinding(batteryVoltageVal, SteeringDisplay::Voltage);
+    display.addDynamicGraphicBinding(currentVal, SteeringDisplay::Current);
     display.addDynamicGraphicBinding(currentSpeedVal, SteeringDisplay::Speed);
     display.addDynamicGraphicBinding(throttleVal, SteeringDisplay::Power);
     display.addDynamicGraphicBinding(lightsVal, SteeringDisplay::Lights);
@@ -263,6 +265,9 @@ void receive_can() {
             uint16_t voltageData = msg.data[1] | msg.data[0] << 8;
             batt_t voltage = voltageData / CAN_BATT_VOLTAGE_SCALING_FACTOR;
             batteryVoltageVal.set(voltage);
+
+            uint8_t currentData = msg.data[2];
+            currentVal.set(currentData);
         }
     }
 }
