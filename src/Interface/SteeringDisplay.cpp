@@ -50,25 +50,25 @@
 
 // speed
 #define SPEED_X_LABEL 50
-#define SPEED_Y_LABEL 103
+#define SPEED_Y_LABEL 103+40
 #define SPEED_X 80
 #define SPEED_X_UNIT_OFFSET 110
-#define SPEED_Y 85
+#define SPEED_Y 85+40
 
 // power
 #define POWER_X_LABEL 48
-#define POWER_Y_LABEL 153
+#define POWER_Y_LABEL 153+30
 #define POWER_X 80
 #define POWER_X_UNIT_OFFSET 110
-#define POWER_Y 135
+#define POWER_Y 135+30
 
 // time
 #define TIME_X_LABEL 46
-#define TIME_Y_LABEL 203
+#define TIME_Y_LABEL 203+20
 #define MINUTES_X 80
 #define COLON_X 160
 #define SECONDS_X 185
-#define TIME_Y 185
+#define TIME_Y 185+20
 
 // throttle debug
 #define THROTTLE_RAW_X 10

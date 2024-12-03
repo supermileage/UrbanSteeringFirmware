@@ -262,11 +262,12 @@ void receive_can() {
             uint8_t socData = msg.data[4];
             batt_t soc = socData / CAN_BATT_SOC_SCALING_FACTOR;
             batterySocVal.set(soc);
+
             uint16_t voltageData = msg.data[1] | msg.data[0] << 8;
             batt_t voltage = voltageData / CAN_BATT_VOLTAGE_SCALING_FACTOR;
             batteryVoltageVal.set(voltage);
 
-            uint8_t currentData = msg.data[2];
+            uint8_t currentData = msg.data[2]/CAN_BATT_VOLTAGE_SCALING_FACTOR;
             currentVal.set(currentData);
         }
     }
