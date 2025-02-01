@@ -218,7 +218,7 @@ throttle_t get_throttle_val() {
     int throttleVal = (int)(throttle.read() * 10000);
 
 #ifdef DEBUG_MODE
-    printf("Throttle Input: %04d - ", throttleVal);
+    //printf("Throttle Input: %04d - ", throttleVal);
 #endif
 
     // Keep values within min/max
@@ -245,7 +245,7 @@ data_t getDmsVal() {
     dmsLed.write(0);
     int dmsDelta = dmsVal - dmsCtrl;
 #ifdef DEBUG_MODE
-    printf("DMS Delta: %04d\n", dmsDelta >= 0 ? dmsDelta : 0);
+   // printf("DMS Delta: %04d \n", dmsDelta >= 0 ? dmsDelta : 0);
 #endif
 
     return (data_t)(dmsDelta > DMS_DELTA_THRESHOLD);
@@ -267,8 +267,22 @@ void receive_can() {
             batt_t voltage = voltageData / CAN_BATT_VOLTAGE_SCALING_FACTOR;
             batteryVoltageVal.set(voltage);
 
-            uint8_t currentData = msg.data[2]/CAN_BATT_VOLTAGE_SCALING_FACTOR;
-            currentVal.set(currentData);
+            uint16_t currentData = (msg.data[4] << 8) | msg.data[3];
+            batt_t current = currentData;
+            currentVal.set(current);
+
+            char buffer[10];  
+
+           // sprintf(buffer, "%u", currentData);
+
+            // printf("Hello World:::");
+            // printf("Value as string: %s\n", buffer);
+
+          //  printf("Byte 2: %u, Byte 3: %u\n", msg.data[2], msg.data[3]);
+ 
+
+            
+      
         }
     }
 }
