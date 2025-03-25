@@ -3,6 +3,11 @@
 ## Purpose
 Firmware running on the stm32L432kc microcontroller in the urban steering wheel as a node on the CAN bus interfacing with the driver.
 
+## Cloning the Project
+Make sure to clone the repository with submodules to ensure all dependencies are included:
+
+git clone --recurse-submodules
+
 ## Compiling
 Before compiling, make sure you've installed the platformio extension for vscode.  After opening the project, you should see the platformio toolbar appear on the bottom left, which you can use to compile, flash and open a serial port for debugging.
 
