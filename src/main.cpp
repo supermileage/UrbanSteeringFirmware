@@ -183,8 +183,9 @@ char read_accessory_inputs(char &hazards) {
         turnLeftVal.set(turnLeft);
         turnRightVal.set(turnRight);
     }
-    char dataStr = (wiperVal << 6) | (turnLeftVal.value() << 5) | (turnRightVal.value() << 4) |
-                   (hazards << 3) | (horn << 2) | (currentBrake << 1) | lightsVal.value();
+   
+     char dataStr = (wiperVal << 1) | (turnLeftVal.value() << 2) | (turnRightVal.value() << 3) |
+                   /*(hazards << 3) |*/ (horn << 4) | (currentBrake << 5) | lightsVal.value();
 
     if (hazards) {
         turnLeftVal.set(0);
