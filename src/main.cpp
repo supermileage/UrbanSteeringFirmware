@@ -175,6 +175,7 @@ char read_accessory_inputs(char &hazards) {
     char turnLeft = buttonState[IND_LEFT_BUTTON];
     char turnRight = buttonState[IND_RIGHT_BUTTON];
     char wiperVal = buttonState[WIPER_BUTTON];
+    char ignitionVal = buttonState[IGNITION_BUTTON];
 
     if (hazards) {
         turnLeftVal.set(1);
@@ -185,7 +186,7 @@ char read_accessory_inputs(char &hazards) {
     }
    
      char dataStr = (wiperVal << 1) | (turnLeftVal.value() << 2) | (turnRightVal.value() << 3) |
-                   /*(hazards << 3) |*/ (horn << 4) | (currentBrake << 5) | lightsVal.value();
+                   /*(hazards << 3) |*/ (horn << 4) | (currentBrake << 5) | lightsVal.value() | (ignitionVal << 6);
 
     if (hazards) {
         turnLeftVal.set(0);
