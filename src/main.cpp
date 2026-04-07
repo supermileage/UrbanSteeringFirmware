@@ -318,9 +318,12 @@ void receive_can() {
             // Reconstruct the integer value from the byte array
             int rpm =(msg.data[0] << 8) | msg.data[1];
             rpmVal.set(rpm);
-            currentSpeedVal.set(rpm/16/3);
-            
-        } else if (msg.id == CAN_ORIONBMS_PACK) {
+        } 
+        else if (msg.id == CAN_TELEMETRY_GPS_DATA) {
+            int speed_kmh =(msg.data[0]);
+            currentSpeedVal.set(speed_kmh); 
+        }
+        else if (msg.id == CAN_ORIONBMS_PACK) {
             uint8_t socData = msg.data[4];
             batt_t soc = socData / CAN_BATT_SOC_SCALING_FACTOR;
             batterySocVal.set(soc);
