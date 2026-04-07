@@ -314,7 +314,7 @@ void receive_can() {
     CANMessage msg;
 
     if (can.read(msg)) {
-        if(msg.id == CAN_MOTOR_RPM) {   
+        if(msg.id == CAN_URBAN_MC_RPM) {   
             // Reconstruct the integer value from the byte array
             int rpm =(msg.data[0] << 8) | msg.data[1];
             rpmVal.set(rpm);
