@@ -8,6 +8,16 @@ Make sure to clone the repository with submodules to ensure all dependencies are
 
 git clone --recurse-submodules
 
+## Building and Flashing
+Since Mbed's build dependencies rely on the python module imp, which was removed in python 3.12. Therefore, it is advised to install [uv](https://docs.astral.sh/uv/getting-started/installation/), a python package manager. Then, run:
+``` pwsh
+uv tool run --python 3.11 platformio run
+```
+to build the firmware. To flash, run:
+``` pwsh
+uv tool run --python 3.11 platformio run -t upload
+```
+
 ## Compiling
 Before compiling, make sure you've installed the platformio extension for vscode.  After opening the project, you should see the platformio toolbar appear on the bottom left, which you can use to compile, flash and open a serial port for debugging.
 
